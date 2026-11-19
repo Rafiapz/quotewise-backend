@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { RFQController } from '../controllers/rfq.controller';
 import { QuotationController } from '../../../quotation/presentation/controllers/quotation.controller';
 import { validateRequest } from '../../../../shared/middleware/validateRequest';
@@ -6,9 +6,14 @@ import { createRfqSchema, rfqIdParamSchema } from '../../application/dto/rfq.dto
 
 export const createRfqRouter = (
   rfqController: RFQController,
-  quotationController?: QuotationController
+  quotationController?: QuotationController,
+  authMiddleware?: RequestHandler
 ): Router => {
   const router = Router();
+
+  if (authMiddleware) {
+    router.use(authMiddleware);
+  }
 
   router.get('/', rfqController.getAll);
 

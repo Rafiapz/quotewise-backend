@@ -1,13 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { RFQUseCases } from '../../application/use-cases/rfq.use-cases';
 import { CreateRfqDTO } from '../../application/dto/rfq.dto';
+import { UnauthorizedError } from '../../../../shared/errors/AppError';
 
 export class RFQController {
   constructor(private readonly rfqUseCases: RFQUseCases) {}
 
-  public getAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const rfqs = await this.rfqUseCases.getRfqList();
+      const userId = (req.query.userId as string) || undefined;
+      const rfqs = userId
+        ? await this.rfqUseCases.getRfqListByUserId(userId)
+        : await this.rfqUseCases.getRfqList();
+
       res.status(200).json({
         success: true,
         data: rfqs.map((rfq) => ({
@@ -80,10 +85,23 @@ export class RFQController {
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const dto: CreateRfqDTO = req.body;
+      const resolvedUserId = (req.body.userId as string | undefined) || req.user?.userId;
+      if (!resolvedUserId) {
+        throw new UnauthorizedError('User authentication required to create an RFQ');
+      }
+
+      const dto: CreateRfqDTO = {
+        partNumber: String(req.body.partNumber),
+        description: String(req.body.description),
+        quantity: Number(req.body.quantity),
+        neededBy: String(req.body.neededBy),
+        userId: resolvedUserId,
+      };
+
       const rfq = await this.rfqUseCases.createRfq(dto);
       res.status(201).json({
         success: true,
+        message: 'RFQ created successfully',
         data: {
           id: rfq.id,
           partNumber: rfq.partNumber,

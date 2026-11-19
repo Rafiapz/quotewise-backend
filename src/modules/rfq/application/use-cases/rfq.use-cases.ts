@@ -20,6 +20,10 @@ export class RFQUseCases {
     return this.rfqRepository.findAll();
   }
 
+  public async getRfqListByUserId(userId: string): Promise<RFQEntity[]> {
+    return this.rfqRepository.findByUserId(userId);
+  }
+
   public async getRfqById(id: string): Promise<RFQEntity> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {

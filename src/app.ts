@@ -85,7 +85,7 @@ export const createApp = (): Application => {
   app.use('/api/auth', authRouter);
   app.use('/api/v1/auth', authRouter);
 
-  app.use('/api/rfqs', createRfqRouter(rfqController, quotationController));
+  app.use('/api/rfqs', createRfqRouter(rfqController, quotationController, authMiddleware));
   app.use('/api/quotations', createQuotationRouter(quotationController));
 
   // Centralized Error Handling
