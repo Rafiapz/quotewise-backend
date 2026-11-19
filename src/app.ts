@@ -2,9 +2,19 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import { prisma } from './config/database';
 import { errorHandler } from './shared/middleware/errorHandler';
+
+// Auth Module
+import { PrismaUserRepository } from './modules/auth/infrastructure/repositories/prisma-user.repository';
+import { BcryptPasswordHasher } from './modules/auth/infrastructure/services/bcrypt-password-hasher';
+import { JwtTokenService } from './modules/auth/infrastructure/services/jwt-token-service';
+import { AuthUseCases } from './modules/auth/application/use-cases/auth.use-cases';
+import { AuthController } from './modules/auth/presentation/controllers/auth.controller';
+import { createAuthRouter } from './modules/auth/presentation/routes/auth.routes';
+import { createAuthMiddleware } from './shared/middleware/auth.middleware';
 
 // RFQ Module
 import { PrismaRFQRepository } from './modules/rfq/infrastructure/repositories/prisma-rfq.repository';
@@ -21,7 +31,7 @@ import { createQuotationRouter } from './modules/quotation/presentation/routes/q
 export const createApp = (): Application => {
   const app = express();
 
-  // Middleware
+  // Security and base middlewares
   app.use(helmet());
   app.use(
     cors({
@@ -35,6 +45,7 @@ export const createApp = (): Application => {
   }
 
   app.use(express.json());
+  app.use(cookieParser());
 
   // Health check endpoint
   app.get('/api/health', (_req: Request, res: Response) => {
@@ -46,7 +57,20 @@ export const createApp = (): Application => {
     });
   });
 
-  // Dependency Inversion
+  // Dependency Inversion: Auth Module
+  const userRepository = new PrismaUserRepository(prisma);
+  const passwordHasher = new BcryptPasswordHasher(12);
+  const tokenService = new JwtTokenService(config.JWT_SECRET, config.JWT_EXPIRES_IN);
+
+  const authUseCases = new AuthUseCases(userRepository, passwordHasher, tokenService);
+  const authController = new AuthController(authUseCases, {
+    name: config.COOKIE_NAME,
+    isProduction: config.NODE_ENV === 'production',
+    maxAgeMs: 7 * 24 * 60 * 60 * 1000,
+  });
+  const authMiddleware = createAuthMiddleware(tokenService, config.COOKIE_NAME);
+
+  // Dependency Inversion: RFQ & Quotation Modules
   const rfqRepository = new PrismaRFQRepository(prisma);
   const quotationRepository = new PrismaQuotationRepository(prisma);
 
@@ -57,6 +81,10 @@ export const createApp = (): Application => {
   const quotationController = new QuotationController(quotationUseCases);
 
   // Routes
+  const authRouter = createAuthRouter(authController, authMiddleware);
+  app.use('/api/auth', authRouter);
+  app.use('/api/v1/auth', authRouter);
+
   app.use('/api/rfqs', createRfqRouter(rfqController, quotationController));
   app.use('/api/quotations', createQuotationRouter(quotationController));
 

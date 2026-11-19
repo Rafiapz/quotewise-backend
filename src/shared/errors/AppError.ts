@@ -17,6 +17,24 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized access') {
+    super(message, 401);
+  }
+}
+
+export class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(message, 403);
+  }
+}
+
+export class ConflictError extends AppError {
+  constructor(message = 'Resource already exists') {
+    super(message, 409);
+  }
+}
+
 export class ValidationError extends AppError {
   public readonly errors: Record<string, string[]>;
 
