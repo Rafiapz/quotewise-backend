@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import {
   IRFQRepository,
   CreateRFQData,
@@ -6,6 +6,10 @@ import {
 } from '../../domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../domain/entities/rfq.entity';
 import { SupplierQuoteEntity } from '../../../quotation/domain/entities/quotation.entity';
+
+type PrismaRFQWithQuotes = Prisma.RFQGetPayload<{
+  include: { quotes: true };
+}>;
 
 export class PrismaRFQRepository implements IRFQRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -40,14 +44,16 @@ export class PrismaRFQRepository implements IRFQRepository {
   }
 
   public async create(data: CreateRFQData): Promise<RFQEntity> {
+    const createInput: Prisma.RFQUncheckedCreateInput = {
+      partNumber: data.partNumber,
+      description: data.description,
+      quantity: data.quantity,
+      neededBy: data.neededBy,
+      userId: data.userId,
+    };
+
     const record = await this.prisma.rFQ.create({
-      data: {
-        partNumber: data.partNumber,
-        description: data.description,
-        quantity: data.quantity,
-        neededBy: data.neededBy,
-        userId: data.userId,
-      } as any,
+      data: createInput,
       include: { quotes: true },
     });
 
@@ -84,35 +90,15 @@ export class PrismaRFQRepository implements IRFQRepository {
     }
   }
 
-  private mapToEntity(record: {
-    id: string;
-    partNumber: string;
-    description: string;
-    quantity: number;
-    neededBy: Date;
-    userId: string;
-    createdAt: Date;
-    updatedAt: Date;
-    quotes?: Array<{
-      id: string;
-      rfqId: string;
-      unitPrice: unknown;
-      validUntil: Date;
-      createdAt: Date;
-      updatedAt: Date;
-      name?: string;
-      supplierName?: string;
-      leadTime?: Date | number;
-    }>;
-  }): RFQEntity {
-    const quoteEntities = (record.quotes || []).map(
+  private mapToEntity(record: PrismaRFQWithQuotes): RFQEntity {
+    const quoteEntities = record.quotes.map(
       (q) =>
         new SupplierQuoteEntity({
           id: q.id,
-          name: q.name ?? q.supplierName ?? '',
+          name: q.name,
           rfqId: q.rfqId,
           unitPrice: Number(q.unitPrice),
-          leadTime: q.leadTime instanceof Date ? q.leadTime : new Date(),
+          leadTime: q.leadTime,
           validUntil: q.validUntil,
           createdAt: q.createdAt,
           updatedAt: q.updatedAt,
