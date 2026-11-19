@@ -14,4 +14,5 @@ export interface IQuotationRepository {
   findAll(): Promise<SupplierQuoteEntity[]>;
   create(data: CreateSupplierQuoteData): Promise<SupplierQuoteEntity>;
   delete(id: string): Promise<boolean>;
+  deleteByRfqId(rfqId: string): Promise<number>;
 }

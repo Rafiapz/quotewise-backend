@@ -63,6 +63,18 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     }
   }
 
+  public async deleteByRfqId(rfqId: string): Promise<number> {
+    try {
+      const result = await this.prisma.supplierQuote.updateMany({
+        where: { rfqId, isActive: true },
+        data: { isActive: false },
+      });
+      return result.count;
+    } catch {
+      return 0;
+    }
+  }
+
   private mapToEntity(record: {
     id: string;
     rfqId: string;

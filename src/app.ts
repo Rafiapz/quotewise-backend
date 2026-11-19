@@ -74,7 +74,7 @@ export const createApp = (): Application => {
   const rfqRepository = new PrismaRFQRepository(prisma);
   const quotationRepository = new PrismaQuotationRepository(prisma);
 
-  const rfqUseCases = new RFQUseCases(rfqRepository);
+  const rfqUseCases = new RFQUseCases(rfqRepository, quotationRepository);
   const quotationUseCases = new QuotationUseCases(quotationRepository);
 
   const rfqController = new RFQController(rfqUseCases);

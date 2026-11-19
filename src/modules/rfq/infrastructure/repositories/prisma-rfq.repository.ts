@@ -98,18 +98,11 @@ export class PrismaRFQRepository implements IRFQRepository {
 
   public async delete(id: string): Promise<boolean> {
     try {
-      const [, rfqResult] = await this.prisma.$transaction([
-        this.prisma.supplierQuote.updateMany({
-          where: { rfqId: id, isActive: true },
-          data: { isActive: false },
-        }),
-        this.prisma.rFQ.updateMany({
-          where: { id, isActive: true },
-          data: { isActive: false },
-        }),
-      ]);
-
-      return rfqResult.count > 0;
+      const result = await this.prisma.rFQ.updateMany({
+        where: { id, isActive: true },
+        data: { isActive: false },
+      });
+      return result.count > 0;
     } catch {
       return false;
     }
