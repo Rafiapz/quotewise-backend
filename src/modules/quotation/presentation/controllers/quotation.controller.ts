@@ -2,6 +2,12 @@ import { Request, Response, NextFunction } from 'express';
 import { QuotationUseCases } from '../../application/use-cases/quotation.use-cases';
 import { CreateQuotationDTO } from '../../application/dto/quotation.dto';
 
+const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
+  const diffMs = leadTime.getTime() - createdAt.getTime();
+  const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(1, days);
+};
+
 export class QuotationController {
   constructor(private readonly quotationUseCases: QuotationUseCases) {}
 
@@ -21,6 +27,7 @@ export class QuotationController {
           rfqId: q.rfqId,
           unitPrice: q.unitPrice,
           leadTime: q.leadTime.toISOString(),
+          leadTimeDays: calculateLeadTimeDays(q.leadTime, q.createdAt),
           validUntil: q.validUntil.toISOString(),
           createdAt: q.createdAt.toISOString(),
           updatedAt: q.updatedAt.toISOString(),
@@ -44,6 +51,7 @@ export class QuotationController {
           rfqId: q.rfqId,
           unitPrice: q.unitPrice,
           leadTime: q.leadTime.toISOString(),
+          leadTimeDays: calculateLeadTimeDays(q.leadTime, q.createdAt),
           validUntil: q.validUntil.toISOString(),
           createdAt: q.createdAt.toISOString(),
           updatedAt: q.updatedAt.toISOString(),
@@ -56,17 +64,26 @@ export class QuotationController {
 
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const dto: CreateQuotationDTO = req.body;
+      const rfqId = req.params.rfqId || req.body.rfqId;
+      const dto: CreateQuotationDTO = {
+        name: String(req.body.name),
+        rfqId: String(rfqId),
+        unitPrice: Number(req.body.unitPrice),
+        leadTime: req.body.leadTime,
+        validUntil: String(req.body.validUntil),
+      };
       const quote = await this.quotationUseCases.createQuotation(dto);
 
       res.status(201).json({
         success: true,
+        message: 'Supplier quotation added successfully',
         data: {
           id: quote.id,
           name: quote.name,
           rfqId: quote.rfqId,
           unitPrice: quote.unitPrice,
           leadTime: quote.leadTime.toISOString(),
+          leadTimeDays: calculateLeadTimeDays(quote.leadTime, quote.createdAt),
           validUntil: quote.validUntil.toISOString(),
           createdAt: quote.createdAt.toISOString(),
           updatedAt: quote.updatedAt.toISOString(),

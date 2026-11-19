@@ -1,11 +1,19 @@
 import { z } from 'zod';
 
 export const createQuotationSchema = z.object({
-  name: z.string().min(1, 'Supplier quote name is required').max(200),
+  name: z.string().min(1, 'Supplier name is required').max(200).trim(),
   rfqId: z.string().uuid('Valid RFQ ID is required'),
-  unitPrice: z.number().positive('Unit price must be a positive number'),
-  leadTime: z.string().datetime({ message: 'leadTime must be a valid ISO 8601 date string' }),
-  validUntil: z.string().datetime({ message: 'validUntil must be a valid ISO 8601 date string' }),
+  unitPrice: z.coerce.number().positive('Unit price must be a positive number'),
+  leadTime: z.union([
+    z.coerce.number().int().positive('Lead time in days must be a positive integer'),
+    z.string().min(1, 'Lead time is required'),
+  ]),
+  validUntil: z
+    .string()
+    .min(1, 'Valid until date is required')
+    .refine((val) => !isNaN(Date.parse(val)), {
+      message: 'validUntil must be a valid date string',
+    }),
 });
 
 export const quotationIdParamSchema = z.object({
@@ -25,6 +33,7 @@ export interface SupplierQuoteResponseDTO {
   rfqId: string;
   unitPrice: number;
   leadTime: string;
+  leadTimeDays: number;
   validUntil: string;
   createdAt: string;
   updatedAt: string;

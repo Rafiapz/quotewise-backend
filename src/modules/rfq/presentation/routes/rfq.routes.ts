@@ -34,6 +34,10 @@ export const createRfqRouter = (
       '/:rfqId/quotations',
       quotationController.getByRfq
     );
+    router.post(
+      '/:rfqId/quotations',
+      quotationController.create
+    );
   }
 
   return router;

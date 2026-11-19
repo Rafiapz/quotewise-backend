@@ -3,6 +3,12 @@ import { RFQUseCases } from '../../application/use-cases/rfq.use-cases';
 import { CreateRfqDTO } from '../../application/dto/rfq.dto';
 import { UnauthorizedError } from '../../../../shared/errors/AppError';
 
+const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
+  const diffMs = leadTime.getTime() - createdAt.getTime();
+  const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(1, days);
+};
+
 export class RFQController {
   constructor(private readonly rfqUseCases: RFQUseCases) {}
 
@@ -32,6 +38,7 @@ export class RFQController {
                 name: rfq.bestQuote.name,
                 unitPrice: rfq.bestQuote.unitPrice,
                 leadTime: rfq.bestQuote.leadTime.toISOString(),
+                leadTimeDays: calculateLeadTimeDays(rfq.bestQuote.leadTime, rfq.bestQuote.createdAt),
                 validUntil: rfq.bestQuote.validUntil.toISOString(),
               }
             : null,
@@ -64,6 +71,7 @@ export class RFQController {
                 name: rfq.bestQuote.name,
                 unitPrice: rfq.bestQuote.unitPrice,
                 leadTime: rfq.bestQuote.leadTime.toISOString(),
+                leadTimeDays: calculateLeadTimeDays(rfq.bestQuote.leadTime, rfq.bestQuote.createdAt),
                 validUntil: rfq.bestQuote.validUntil.toISOString(),
               }
             : null,
@@ -73,6 +81,7 @@ export class RFQController {
             rfqId: q.rfqId,
             unitPrice: q.unitPrice,
             leadTime: q.leadTime.toISOString(),
+            leadTimeDays: calculateLeadTimeDays(q.leadTime, q.createdAt),
             validUntil: q.validUntil.toISOString(),
             createdAt: q.createdAt.toISOString(),
           })),

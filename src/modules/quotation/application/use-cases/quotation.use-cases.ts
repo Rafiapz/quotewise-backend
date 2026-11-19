@@ -6,11 +6,24 @@ export class QuotationUseCases {
   constructor(private readonly quotationRepository: IQuotationRepository) {}
 
   public async createQuotation(dto: CreateQuotationDTO): Promise<SupplierQuoteEntity> {
+    let leadTimeDate: Date;
+
+    if (typeof dto.leadTime === 'number') {
+      leadTimeDate = new Date(Date.now() + dto.leadTime * 86400000);
+    } else {
+      const parsedNumber = Number(dto.leadTime);
+      if (!isNaN(parsedNumber) && parsedNumber > 0 && !dto.leadTime.includes('-') && !dto.leadTime.includes('/')) {
+        leadTimeDate = new Date(Date.now() + parsedNumber * 86400000);
+      } else {
+        leadTimeDate = new Date(dto.leadTime);
+      }
+    }
+
     return this.quotationRepository.create({
       name: dto.name,
       rfqId: dto.rfqId,
       unitPrice: dto.unitPrice,
-      leadTime: new Date(dto.leadTime),
+      leadTime: leadTimeDate,
       validUntil: new Date(dto.validUntil),
     });
   }
