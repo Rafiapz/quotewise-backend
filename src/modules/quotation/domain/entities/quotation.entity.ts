@@ -1,9 +1,9 @@
 export interface SupplierQuoteProps {
   id: string;
+  name: string;
   rfqId: string;
-  supplierName: string;
   unitPrice: number;
-  leadTime: number;
+  leadTime: Date;
   validUntil: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -11,18 +11,18 @@ export interface SupplierQuoteProps {
 
 export class SupplierQuoteEntity {
   public readonly id: string;
+  public readonly name: string;
   public readonly rfqId: string;
-  public readonly supplierName: string;
   public readonly unitPrice: number;
-  public readonly leadTime: number;
+  public readonly leadTime: Date;
   public readonly validUntil: Date;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
   constructor(props: SupplierQuoteProps) {
     this.id = props.id;
+    this.name = props.name;
     this.rfqId = props.rfqId;
-    this.supplierName = props.supplierName;
     this.unitPrice = props.unitPrice;
     this.leadTime = props.leadTime;
     this.validUntil = props.validUntil;

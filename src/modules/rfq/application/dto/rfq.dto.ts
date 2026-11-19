@@ -5,9 +5,10 @@ export const createRfqSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   quantity: z.number().int().positive('Quantity must be a positive integer'),
   neededBy: z.string().datetime({ message: 'neededBy must be a valid ISO 8601 date string' }),
+  userId: z.string().uuid('Valid user ID is required'),
 });
 
-export const updateRfqSchema = createRfqSchema.partial();
+export const updateRfqSchema = createRfqSchema.partial().omit({ userId: true });
 
 export const rfqIdParamSchema = z.object({
   id: z.string().uuid('Invalid RFQ ID format'),
@@ -23,15 +24,16 @@ export interface RfqResponseDTO {
   description: string;
   quantity: number;
   neededBy: string;
+  userId: string;
   createdAt: string;
   updatedAt: string;
   status: string;
   quoteCount: number;
   bestQuote?: {
     id: string;
-    supplierName: string;
+    name: string;
     unitPrice: number;
-    leadTime: number;
+    leadTime: string;
     validUntil: string;
   } | null;
 }

@@ -12,6 +12,7 @@ export class RFQUseCases {
       description: dto.description,
       quantity: dto.quantity,
       neededBy: new Date(dto.neededBy),
+      userId: dto.userId,
     });
   }
 

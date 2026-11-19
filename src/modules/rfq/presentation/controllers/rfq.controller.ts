@@ -16,6 +16,7 @@ export class RFQController {
           description: rfq.description,
           quantity: rfq.quantity,
           neededBy: rfq.neededBy.toISOString(),
+          userId: rfq.userId,
           createdAt: rfq.createdAt.toISOString(),
           updatedAt: rfq.updatedAt.toISOString(),
           status: rfq.status,
@@ -23,9 +24,9 @@ export class RFQController {
           bestQuote: rfq.bestQuote
             ? {
                 id: rfq.bestQuote.id,
-                supplierName: rfq.bestQuote.supplierName,
+                name: rfq.bestQuote.name,
                 unitPrice: rfq.bestQuote.unitPrice,
-                leadTime: rfq.bestQuote.leadTime,
+                leadTime: rfq.bestQuote.leadTime.toISOString(),
                 validUntil: rfq.bestQuote.validUntil.toISOString(),
               }
             : null,
@@ -47,6 +48,7 @@ export class RFQController {
           description: rfq.description,
           quantity: rfq.quantity,
           neededBy: rfq.neededBy.toISOString(),
+          userId: rfq.userId,
           createdAt: rfq.createdAt.toISOString(),
           updatedAt: rfq.updatedAt.toISOString(),
           status: rfq.status,
@@ -54,18 +56,18 @@ export class RFQController {
           bestQuote: rfq.bestQuote
             ? {
                 id: rfq.bestQuote.id,
-                supplierName: rfq.bestQuote.supplierName,
+                name: rfq.bestQuote.name,
                 unitPrice: rfq.bestQuote.unitPrice,
-                leadTime: rfq.bestQuote.leadTime,
+                leadTime: rfq.bestQuote.leadTime.toISOString(),
                 validUntil: rfq.bestQuote.validUntil.toISOString(),
               }
             : null,
           quotes: rfq.quotes.map((q) => ({
             id: q.id,
+            name: q.name,
             rfqId: q.rfqId,
-            supplierName: q.supplierName,
             unitPrice: q.unitPrice,
-            leadTime: q.leadTime,
+            leadTime: q.leadTime.toISOString(),
             validUntil: q.validUntil.toISOString(),
             createdAt: q.createdAt.toISOString(),
           })),
@@ -88,6 +90,7 @@ export class RFQController {
           description: rfq.description,
           quantity: rfq.quantity,
           neededBy: rfq.neededBy.toISOString(),
+          userId: rfq.userId,
           createdAt: rfq.createdAt.toISOString(),
           updatedAt: rfq.updatedAt.toISOString(),
           status: rfq.status,

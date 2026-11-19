@@ -8,6 +8,7 @@ export interface RFQProps {
   description: string;
   quantity: number;
   neededBy: Date;
+  userId: string;
   createdAt: Date;
   updatedAt: Date;
   quotes?: SupplierQuoteEntity[];
@@ -19,6 +20,7 @@ export class RFQEntity {
   public readonly description: string;
   public readonly quantity: number;
   public readonly neededBy: Date;
+  public readonly userId: string;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
   public readonly quotes: SupplierQuoteEntity[];
@@ -29,6 +31,7 @@ export class RFQEntity {
     this.description = props.description;
     this.quantity = props.quantity;
     this.neededBy = props.neededBy;
+    this.userId = props.userId;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
     this.quotes = props.quotes || [];

@@ -7,10 +7,10 @@ export class QuotationUseCases {
 
   public async createQuotation(dto: CreateQuotationDTO): Promise<SupplierQuoteEntity> {
     return this.quotationRepository.create({
+      name: dto.name,
       rfqId: dto.rfqId,
-      supplierName: dto.supplierName,
       unitPrice: dto.unitPrice,
-      leadTime: dto.leadTime,
+      leadTime: new Date(dto.leadTime),
       validUntil: new Date(dto.validUntil),
     });
   }

@@ -1,10 +1,10 @@
 import { z } from 'zod';
 
 export const createQuotationSchema = z.object({
+  name: z.string().min(1, 'Supplier quote name is required').max(200),
   rfqId: z.string().uuid('Valid RFQ ID is required'),
-  supplierName: z.string().min(1, 'Supplier name is required').max(200),
   unitPrice: z.number().positive('Unit price must be a positive number'),
-  leadTime: z.number().int().positive('Lead time in days must be a positive integer'),
+  leadTime: z.string().datetime({ message: 'leadTime must be a valid ISO 8601 date string' }),
   validUntil: z.string().datetime({ message: 'validUntil must be a valid ISO 8601 date string' }),
 });
 
@@ -21,10 +21,10 @@ export type QuotationIdParamDTO = z.infer<typeof quotationIdParamSchema>;
 
 export interface SupplierQuoteResponseDTO {
   id: string;
+  name: string;
   rfqId: string;
-  supplierName: string;
   unitPrice: number;
-  leadTime: number;
+  leadTime: string;
   validUntil: string;
   createdAt: string;
   updatedAt: string;

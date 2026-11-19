@@ -13,6 +13,7 @@ describe('RFQEntity Domain Unit Tests', () => {
       description: 'Steel Ball Bearings',
       quantity: 500,
       neededBy: futureDate,
+      userId: 'user-uuid-1234',
       createdAt: new Date(),
       updatedAt: new Date(),
       quotes: [],
@@ -30,9 +31,9 @@ describe('RFQEntity Domain Unit Tests', () => {
     const quote1 = new SupplierQuoteEntity({
       id: 'quote-1',
       rfqId: 'rfq-1',
-      supplierName: 'Alpha Supply Co.',
+      name: 'Alpha Supply Co.',
       unitPrice: 12.5,
-      leadTime: 14,
+      leadTime: futureDate,
       validUntil: futureDate,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -41,9 +42,9 @@ describe('RFQEntity Domain Unit Tests', () => {
     const quote2 = new SupplierQuoteEntity({
       id: 'quote-2',
       rfqId: 'rfq-1',
-      supplierName: 'Beta Industrial',
+      name: 'Beta Industrial',
       unitPrice: 9.75,
-      leadTime: 20,
+      leadTime: futureDate,
       validUntil: futureDate,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -55,6 +56,7 @@ describe('RFQEntity Domain Unit Tests', () => {
       description: 'Steel Ball Bearings',
       quantity: 500,
       neededBy: futureDate,
+      userId: 'user-uuid-1234',
       createdAt: new Date(),
       updatedAt: new Date(),
       quotes: [quote1, quote2],
@@ -64,6 +66,7 @@ describe('RFQEntity Domain Unit Tests', () => {
     expect(rfq.quoteCount).toBe(2);
     expect(rfq.bestQuote?.id).toBe('quote-2');
     expect(rfq.bestQuote?.unitPrice).toBe(9.75);
+    expect(rfq.bestQuote?.name).toBe('Beta Industrial');
   });
 
   it('should calculate EXPIRED status dynamically when deadline is past', () => {
@@ -76,6 +79,7 @@ describe('RFQEntity Domain Unit Tests', () => {
       description: 'Steel Ball Bearings',
       quantity: 500,
       neededBy: pastDate,
+      userId: 'user-uuid-1234',
       createdAt: new Date(),
       updatedAt: new Date(),
       quotes: [],

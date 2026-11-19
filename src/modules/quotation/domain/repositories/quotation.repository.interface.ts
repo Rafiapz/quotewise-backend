@@ -1,10 +1,10 @@
 import { SupplierQuoteEntity } from '../entities/quotation.entity';
 
 export interface CreateSupplierQuoteData {
+  name: string;
   rfqId: string;
-  supplierName: string;
   unitPrice: number;
-  leadTime: number;
+  leadTime: Date;
   validUntil: Date;
 }
 

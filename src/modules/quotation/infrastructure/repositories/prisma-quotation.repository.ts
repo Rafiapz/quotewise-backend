@@ -37,8 +37,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
   public async create(data: CreateSupplierQuoteData): Promise<SupplierQuoteEntity> {
     const record = await this.prisma.supplierQuote.create({
       data: {
+        name: data.name,
         rfqId: data.rfqId,
-        supplierName: data.supplierName,
         unitPrice: data.unitPrice,
         leadTime: data.leadTime,
         validUntil: data.validUntil,
@@ -61,18 +61,18 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
   private mapToEntity(record: {
     id: string;
+    name: string;
     rfqId: string;
-    supplierName: string;
     unitPrice: unknown;
-    leadTime: number;
+    leadTime: Date;
     validUntil: Date;
     createdAt: Date;
     updatedAt: Date;
   }): SupplierQuoteEntity {
     return new SupplierQuoteEntity({
       id: record.id,
+      name: record.name,
       rfqId: record.rfqId,
-      supplierName: record.supplierName,
       unitPrice: Number(record.unitPrice),
       leadTime: record.leadTime,
       validUntil: record.validUntil,

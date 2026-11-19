@@ -7,6 +7,17 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyName String   @map("company_name")
+  email       String   @unique
+  password    String
+  createdAt   DateTime @default(now()) @map("created_at")
+  rfqs        RFQ[]
+
+  @@map("users")
+}
+
 model RFQ {
   id          String          @id @default(uuid()) @db.Uuid
   partNumber  String          @map("part_number")
@@ -15,21 +26,23 @@ model RFQ {
   neededBy    DateTime        @map("needed_by")
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
+  userId      String          @map("user_id") @db.Uuid
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   quotes      SupplierQuote[]
 
   @@map("rfqs")
 }
 
 model SupplierQuote {
-  id           String   @id @default(uuid()) @db.Uuid
-  rfqId        String   @map("rfq_id") @db.Uuid
-  supplierName String   @map("supplier_name")
-  unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
-  leadTime     Int      @map("lead_time")
-  validUntil   DateTime @map("valid_until")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  rfq          RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid()) @db.Uuid
+  name       String
+  rfqId      String   @map("rfq_id") @db.Uuid
+  unitPrice  Decimal  @map("unit_price") @db.Decimal(12, 2)
+  leadTime   DateTime @map("lead_time")
+  validUntil DateTime @map("valid_until")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  rfq        RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
 
   @@map("supplier_quotes")
 }

@@ -5,6 +5,7 @@ export interface CreateRFQData {
   description: string;
   quantity: number;
   neededBy: Date;
+  userId: string;
 }
 
 export interface UpdateRFQData {
@@ -17,6 +18,7 @@ export interface UpdateRFQData {
 export interface IRFQRepository {
   findById(id: string): Promise<RFQEntity | null>;
   findAll(): Promise<RFQEntity[]>;
+  findByUserId?(userId: string): Promise<RFQEntity[]>;
   create(data: CreateRFQData): Promise<RFQEntity>;
   update(id: string, data: UpdateRFQData): Promise<RFQEntity | null>;
   delete(id: string): Promise<boolean>;

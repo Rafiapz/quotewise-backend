@@ -29,6 +29,16 @@ export class PrismaRFQRepository implements IRFQRepository {
     return records.map((record) => this.mapToEntity(record));
   }
 
+  public async findByUserId(userId: string): Promise<RFQEntity[]> {
+    const records = await this.prisma.rFQ.findMany({
+      where: { userId },
+      include: { quotes: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return records.map((record) => this.mapToEntity(record));
+  }
+
   public async create(data: CreateRFQData): Promise<RFQEntity> {
     const record = await this.prisma.rFQ.create({
       data: {
@@ -36,6 +46,7 @@ export class PrismaRFQRepository implements IRFQRepository {
         description: data.description,
         quantity: data.quantity,
         neededBy: data.neededBy,
+        userId: data.userId,
       },
       include: { quotes: true },
     });
@@ -79,14 +90,15 @@ export class PrismaRFQRepository implements IRFQRepository {
     description: string;
     quantity: number;
     neededBy: Date;
+    userId: string;
     createdAt: Date;
     updatedAt: Date;
     quotes?: Array<{
       id: string;
+      name: string;
       rfqId: string;
-      supplierName: string;
       unitPrice: unknown;
-      leadTime: number;
+      leadTime: Date;
       validUntil: Date;
       createdAt: Date;
       updatedAt: Date;
@@ -96,8 +108,8 @@ export class PrismaRFQRepository implements IRFQRepository {
       (q) =>
         new SupplierQuoteEntity({
           id: q.id,
+          name: q.name,
           rfqId: q.rfqId,
-          supplierName: q.supplierName,
           unitPrice: Number(q.unitPrice),
           leadTime: q.leadTime,
           validUntil: q.validUntil,
@@ -112,6 +124,7 @@ export class PrismaRFQRepository implements IRFQRepository {
       description: record.description,
       quantity: record.quantity,
       neededBy: record.neededBy,
+      userId: record.userId,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       quotes: quoteEntities,
