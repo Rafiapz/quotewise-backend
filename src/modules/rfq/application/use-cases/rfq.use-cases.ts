@@ -31,4 +31,12 @@ export class RFQUseCases {
     }
     return rfq;
   }
+
+  public async deleteRfq(id: string): Promise<boolean> {
+    const deleted = await this.rfqRepository.delete(id);
+    if (!deleted) {
+      throw new NotFoundError(`RFQ with ID ${id} not found or already deleted`);
+    }
+    return true;
+  }
 }

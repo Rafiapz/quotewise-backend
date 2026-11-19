@@ -12,6 +12,7 @@ model User {
   companyName String   @map("company_name")
   email       String   @unique
   password    String
+  isActive    Boolean  @default(true) @map("is_active")
   createdAt   DateTime @default(now()) @map("created_at")
   rfqs        RFQ[]
 
@@ -24,6 +25,7 @@ model RFQ {
   description String          @db.Text
   quantity    Int
   neededBy    DateTime        @map("needed_by")
+  isActive    Boolean         @default(true) @map("is_active")
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
   userId      String          @map("user_id") @db.Uuid
@@ -40,6 +42,7 @@ model SupplierQuote {
   unitPrice  Decimal  @map("unit_price") @db.Decimal(12, 2)
   leadTime   DateTime @map("lead_time")
   validUntil DateTime @map("valid_until")
+  isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
   rfq        RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)

@@ -9,8 +9,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async findById(id: string): Promise<SupplierQuoteEntity | null> {
-    const record = await this.prisma.supplierQuote.findUnique({
-      where: { id },
+    const record = await this.prisma.supplierQuote.findFirst({
+      where: { id, isActive: true },
     });
 
     if (!record) return null;
@@ -19,7 +19,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
   public async findByRfqId(rfqId: string): Promise<SupplierQuoteEntity[]> {
     const records = await this.prisma.supplierQuote.findMany({
-      where: { rfqId },
+      where: { rfqId, isActive: true },
       orderBy: { unitPrice: 'asc' },
     });
 
@@ -28,6 +28,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
   public async findAll(): Promise<SupplierQuoteEntity[]> {
     const records = await this.prisma.supplierQuote.findMany({
+      where: { isActive: true },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -52,10 +53,11 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
   public async delete(id: string): Promise<boolean> {
     try {
-      await this.prisma.supplierQuote.delete({
-        where: { id },
+      const result = await this.prisma.supplierQuote.updateMany({
+        where: { id, isActive: true },
+        data: { isActive: false },
       });
-      return true;
+      return result.count > 0;
     } catch {
       return false;
     }
@@ -66,6 +68,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     rfqId: string;
     unitPrice: unknown;
     validUntil: Date;
+    isActive?: boolean;
     createdAt: Date;
     updatedAt: Date;
     name?: string;
@@ -91,6 +94,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       unitPrice: Number(record.unitPrice),
       leadTime: resolvedLeadTime,
       validUntil: record.validUntil,
+      isActive: record.isActive !== undefined ? record.isActive : true,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     });

@@ -11,9 +11,13 @@ export class PrismaRFQRepository implements IRFQRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async findById(id: string): Promise<RFQEntity | null> {
-    const record = await this.prisma.rFQ.findUnique({
-      where: { id },
-      include: { quotes: true },
+    const record = await this.prisma.rFQ.findFirst({
+      where: { id, isActive: true },
+      include: {
+        quotes: {
+          where: { isActive: true },
+        },
+      },
     });
 
     if (!record) return null;
@@ -22,7 +26,12 @@ export class PrismaRFQRepository implements IRFQRepository {
 
   public async findAll(): Promise<RFQEntity[]> {
     const records = await this.prisma.rFQ.findMany({
-      include: { quotes: true },
+      where: { isActive: true },
+      include: {
+        quotes: {
+          where: { isActive: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -31,8 +40,12 @@ export class PrismaRFQRepository implements IRFQRepository {
 
   public async findByUserId(userId: string): Promise<RFQEntity[]> {
     const records = await this.prisma.rFQ.findMany({
-      where: { userId },
-      include: { quotes: true },
+      where: { userId, isActive: true },
+      include: {
+        quotes: {
+          where: { isActive: true },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
 
@@ -50,7 +63,11 @@ export class PrismaRFQRepository implements IRFQRepository {
 
     const record = await this.prisma.rFQ.create({
       data: payload as unknown as Prisma.RFQUncheckedCreateInput,
-      include: { quotes: true },
+      include: {
+        quotes: {
+          where: { isActive: true },
+        },
+      },
     });
 
     return this.mapToEntity(record);
@@ -66,7 +83,11 @@ export class PrismaRFQRepository implements IRFQRepository {
           ...(data.quantity && { quantity: data.quantity }),
           ...(data.neededBy && { neededBy: data.neededBy }),
         },
-        include: { quotes: true },
+        include: {
+          quotes: {
+            where: { isActive: true },
+          },
+        },
       });
 
       return this.mapToEntity(record);
@@ -77,10 +98,18 @@ export class PrismaRFQRepository implements IRFQRepository {
 
   public async delete(id: string): Promise<boolean> {
     try {
-      await this.prisma.rFQ.delete({
-        where: { id },
-      });
-      return true;
+      const [, rfqResult] = await this.prisma.$transaction([
+        this.prisma.supplierQuote.updateMany({
+          where: { rfqId: id, isActive: true },
+          data: { isActive: false },
+        }),
+        this.prisma.rFQ.updateMany({
+          where: { id, isActive: true },
+          data: { isActive: false },
+        }),
+      ]);
+
+      return rfqResult.count > 0;
     } catch {
       return false;
     }
@@ -93,6 +122,7 @@ export class PrismaRFQRepository implements IRFQRepository {
     quantity: number;
     neededBy: Date;
     userId: string;
+    isActive?: boolean;
     createdAt: Date;
     updatedAt: Date;
     quotes?: Array<{
@@ -100,6 +130,7 @@ export class PrismaRFQRepository implements IRFQRepository {
       rfqId: string;
       unitPrice: unknown;
       validUntil: Date;
+      isActive?: boolean;
       createdAt: Date;
       updatedAt: Date;
       name?: string;
@@ -127,6 +158,7 @@ export class PrismaRFQRepository implements IRFQRepository {
         unitPrice: Number(q.unitPrice),
         leadTime: resolvedLeadTime,
         validUntil: q.validUntil,
+        isActive: q.isActive !== undefined ? q.isActive : true,
         createdAt: q.createdAt,
         updatedAt: q.updatedAt,
       });
@@ -139,6 +171,7 @@ export class PrismaRFQRepository implements IRFQRepository {
       quantity: record.quantity,
       neededBy: record.neededBy,
       userId: record.userId,
+      isActive: record.isActive !== undefined ? record.isActive : true,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       quotes: quoteEntities,

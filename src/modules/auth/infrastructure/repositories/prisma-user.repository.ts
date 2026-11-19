@@ -6,8 +6,11 @@ export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async findByEmail(email: string): Promise<UserEntity | null> {
-    const record = await this.prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    const record = await this.prisma.user.findFirst({
+      where: {
+        email: email.toLowerCase().trim(),
+        isActive: true,
+      },
     });
 
     if (!record) {
@@ -19,13 +22,17 @@ export class PrismaUserRepository implements IUserRepository {
       record.companyName,
       record.email,
       record.password,
-      record.createdAt
+      record.createdAt,
+      record.isActive
     );
   }
 
   public async findById(id: string): Promise<UserEntity | null> {
-    const record = await this.prisma.user.findUnique({
-      where: { id },
+    const record = await this.prisma.user.findFirst({
+      where: {
+        id,
+        isActive: true,
+      },
     });
 
     if (!record) {
@@ -37,7 +44,8 @@ export class PrismaUserRepository implements IUserRepository {
       record.companyName,
       record.email,
       record.password,
-      record.createdAt
+      record.createdAt,
+      record.isActive
     );
   }
 
@@ -55,7 +63,8 @@ export class PrismaUserRepository implements IUserRepository {
       record.companyName,
       record.email,
       record.password,
-      record.createdAt
+      record.createdAt,
+      record.isActive
     );
   }
 }

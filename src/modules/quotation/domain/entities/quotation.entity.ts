@@ -5,6 +5,7 @@ export interface SupplierQuoteProps {
   unitPrice: number;
   leadTime: Date;
   validUntil: Date;
+  isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +17,7 @@ export class SupplierQuoteEntity {
   public readonly unitPrice: number;
   public readonly leadTime: Date;
   public readonly validUntil: Date;
+  public readonly isActive: boolean;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
@@ -26,6 +28,7 @@ export class SupplierQuoteEntity {
     this.unitPrice = props.unitPrice;
     this.leadTime = props.leadTime;
     this.validUntil = props.validUntil;
+    this.isActive = props.isActive !== undefined ? props.isActive : true;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
   }

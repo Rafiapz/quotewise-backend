@@ -29,6 +29,12 @@ export const createRfqRouter = (
     rfqController.create
   );
 
+  router.delete(
+    '/:id',
+    validateRequest({ params: rfqIdParamSchema }),
+    rfqController.delete
+  );
+
   if (quotationController) {
     router.get(
       '/:rfqId/quotations',

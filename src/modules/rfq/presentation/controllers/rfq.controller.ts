@@ -129,4 +129,16 @@ export class RFQController {
       next(error);
     }
   };
+
+  public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await this.rfqUseCases.deleteRfq(req.params.id);
+      res.status(200).json({
+        success: true,
+        message: 'RFQ and associated quotes deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
