@@ -59,6 +59,14 @@ export const errorHandler = (
       });
       return;
     }
+
+    if (err.code === 'P2021') {
+      res.status(500).json({
+        success: false,
+        message: 'Database tables have not been created yet. Please run `npx prisma db push`.',
+      });
+      return;
+    }
   }
 
   // Unhandled internal errors
