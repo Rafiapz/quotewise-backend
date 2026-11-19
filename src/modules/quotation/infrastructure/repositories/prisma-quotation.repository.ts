@@ -61,20 +61,25 @@ export class PrismaQuotationRepository implements IQuotationRepository {
 
   private mapToEntity(record: {
     id: string;
-    name: string;
     rfqId: string;
     unitPrice: unknown;
-    leadTime: Date;
     validUntil: Date;
     createdAt: Date;
     updatedAt: Date;
+    name?: string;
+    supplierName?: string;
+    leadTime?: Date | number;
   }): SupplierQuoteEntity {
+    const resolvedName = record.name ?? record.supplierName ?? '';
+    const resolvedLeadTime =
+      record.leadTime instanceof Date ? record.leadTime : new Date();
+
     return new SupplierQuoteEntity({
       id: record.id,
-      name: record.name,
+      name: resolvedName,
       rfqId: record.rfqId,
       unitPrice: Number(record.unitPrice),
-      leadTime: record.leadTime,
+      leadTime: resolvedLeadTime,
       validUntil: record.validUntil,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,

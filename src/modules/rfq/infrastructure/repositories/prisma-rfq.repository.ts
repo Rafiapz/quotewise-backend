@@ -95,23 +95,24 @@ export class PrismaRFQRepository implements IRFQRepository {
     updatedAt: Date;
     quotes?: Array<{
       id: string;
-      name: string;
       rfqId: string;
       unitPrice: unknown;
-      leadTime: Date;
       validUntil: Date;
       createdAt: Date;
       updatedAt: Date;
+      name?: string;
+      supplierName?: string;
+      leadTime?: Date | number;
     }>;
   }): RFQEntity {
     const quoteEntities = (record.quotes || []).map(
       (q) =>
         new SupplierQuoteEntity({
           id: q.id,
-          name: q.name,
+          name: q.name ?? q.supplierName ?? '',
           rfqId: q.rfqId,
           unitPrice: Number(q.unitPrice),
-          leadTime: q.leadTime,
+          leadTime: q.leadTime instanceof Date ? q.leadTime : new Date(),
           validUntil: q.validUntil,
           createdAt: q.createdAt,
           updatedAt: q.updatedAt,
