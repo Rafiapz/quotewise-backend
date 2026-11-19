@@ -6,9 +6,10 @@ export class PrismaUserRepository implements IUserRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   public async findByEmail(email: string): Promise<UserEntity | null> {
+    const normalizedEmail = email.toLowerCase().trim();
     const record = await this.prisma.user.findFirst({
       where: {
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         isActive: true,
       },
     });
@@ -68,3 +69,4 @@ export class PrismaUserRepository implements IUserRepository {
     );
   }
 }
+
