@@ -20,13 +20,6 @@ export class PrismaRFQRepository implements IRFQRepository {
     return this.mapToEntity(record);
   }
 
-  public async exists(id: string): Promise<boolean> {
-    const count = await this.prisma.rFQ.count({
-      where: { id },
-    });
-    return count > 0;
-  }
-
   public async findAll(): Promise<RFQEntity[]> {
     const records = await this.prisma.rFQ.findMany({
       include: { quotes: true },

@@ -24,10 +24,6 @@ export class RFQEntity {
   public readonly quotes: SupplierQuoteEntity[];
 
   constructor(props: RFQProps) {
-    if (props.quantity <= 0) {
-      throw new Error('Quantity must be a positive integer greater than zero.');
-    }
-
     this.id = props.id;
     this.partNumber = props.partNumber;
     this.description = props.description;
@@ -39,17 +35,14 @@ export class RFQEntity {
   }
 
   /**
-   * Determines if the RFQ deadline has passed relative to a reference date.
-   */
-  public isExpired(referenceDate: Date = new Date()): boolean {
-    return this.neededBy.getTime() < referenceDate.getTime();
-  }
-
-  /**
-   * Calculates the RFQ status dynamically based on deadline and quotations count.
+   * Calculates RFQ status dynamically:
+   * - EXPIRED if deadline has passed
+   * - QUOTED if quotations have been received
+   * - OPEN if pending quotations
    */
   public get status(): RfqStatus {
-    if (this.isExpired()) {
+    const now = new Date();
+    if (this.neededBy.getTime() < now.getTime()) {
       return 'EXPIRED';
     }
     if (this.quotes.length > 0) {
@@ -59,34 +52,18 @@ export class RFQEntity {
   }
 
   /**
-   * Determines if new supplier quotations can still be accepted.
-   */
-  public canAcceptQuotes(referenceDate: Date = new Date()): boolean {
-    return !this.isExpired(referenceDate);
-  }
-
-  /**
-   * Calculates the best quotation dynamically (lowest unit price among active, non-expired quotes).
-   * If all quotes are expired, falls back to the lowest quote overall.
+   * Calculates best quotation dynamically (lowest unit price).
    */
   public get bestQuote(): SupplierQuoteEntity | null {
     if (this.quotes.length === 0) {
       return null;
     }
 
-    const now = new Date();
-    const activeQuotes = this.quotes.filter((q) => !q.isExpired(now));
-
-    const candidatePool = activeQuotes.length > 0 ? activeQuotes : this.quotes;
-
-    return candidatePool.reduce<SupplierQuoteEntity>((best, current) => {
+    return this.quotes.reduce<SupplierQuoteEntity>((best, current) => {
       return current.unitPrice < best.unitPrice ? current : best;
-    }, candidatePool[0]);
+    }, this.quotes[0]);
   }
 
-  /**
-   * Dynamic total quotation count.
-   */
   public get quoteCount(): number {
     return this.quotes.length;
   }

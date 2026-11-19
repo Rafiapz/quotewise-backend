@@ -17,24 +17,6 @@ export class NotFoundError extends AppError {
   }
 }
 
-export class BadRequestError extends AppError {
-  constructor(message = 'Bad request') {
-    super(message, 400);
-  }
-}
-
-export class ConflictError extends AppError {
-  constructor(message = 'Resource conflict') {
-    super(message, 409);
-  }
-}
-
-export class DomainError extends AppError {
-  constructor(message: string) {
-    super(message, 400);
-  }
-}
-
 export class ValidationError extends AppError {
   public readonly errors: Record<string, string[]>;
 
