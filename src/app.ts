@@ -1,0 +1,90 @@
+import express, { Application, Request, Response } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import { config } from './config/env';
+import { prisma } from './config/database';
+import { errorHandler } from './shared/middleware/errorHandler';
+
+// RFQ Module
+import { PrismaRFQRepository } from './modules/rfq/infrastructure/repositories/prisma-rfq.repository';
+import { CreateRfqUseCase } from './modules/rfq/application/use-cases/create-rfq.use-case';
+import { GetRfqListUseCase } from './modules/rfq/application/use-cases/get-rfq-list.use-case';
+import { GetRfqByIdUseCase } from './modules/rfq/application/use-cases/get-rfq-by-id.use-case';
+import { RFQController } from './modules/rfq/presentation/controllers/rfq.controller';
+import { createRfqRouter } from './modules/rfq/presentation/routes/rfq.routes';
+
+// Quotation Module
+import { PrismaQuotationRepository } from './modules/quotation/infrastructure/repositories/prisma-quotation.repository';
+import { CreateQuotationUseCase } from './modules/quotation/application/use-cases/create-quotation.use-case';
+import { GetQuotationsByRfqUseCase } from './modules/quotation/application/use-cases/get-quotations-by-rfq.use-case';
+import { QuotationController } from './modules/quotation/presentation/controllers/quotation.controller';
+import { createQuotationRouter } from './modules/quotation/presentation/routes/quotation.routes';
+
+export const createApp = (): Application => {
+  const app = express();
+
+  // Security & Utility Middleware
+  app.use(helmet());
+  app.use(
+    cors({
+      origin: [config.FRONTEND_URL, 'http://localhost:5173'],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+    })
+  );
+
+  if (config.NODE_ENV !== 'test') {
+    app.use(morgan('dev'));
+  }
+
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Health check endpoint
+  app.get('/api/health', (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'quotewise-backend',
+      environment: config.NODE_ENV,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Dependency Inversion / Wire Repositories
+  const rfqRepository = new PrismaRFQRepository(prisma);
+  const quotationRepository = new PrismaQuotationRepository(prisma);
+
+  // Wire Use Cases
+  const createRfqUseCase = new CreateRfqUseCase(rfqRepository);
+  const getRfqListUseCase = new GetRfqListUseCase(rfqRepository);
+  const getRfqByIdUseCase = new GetRfqByIdUseCase(rfqRepository);
+
+  const createQuotationUseCase = new CreateQuotationUseCase(quotationRepository, rfqRepository);
+  const getQuotationsByRfqUseCase = new GetQuotationsByRfqUseCase(quotationRepository, rfqRepository);
+
+  // Wire Controllers
+  const rfqController = new RFQController(
+    createRfqUseCase,
+    getRfqListUseCase,
+    getRfqByIdUseCase
+  );
+
+  const quotationController = new QuotationController(
+    createQuotationUseCase,
+    getQuotationsByRfqUseCase,
+    quotationRepository
+  );
+
+  // Register Presentation Routes
+  app.use('/api/rfqs', createRfqRouter(rfqController));
+  app.use('/api/quotations', createQuotationRouter(quotationController));
+
+  // Centralized Error Handling
+  app.use(errorHandler);
+
+  return app;
+};
+
+export default createApp;

@@ -1,0 +1,35 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model RFQ {
+  id          String          @id @default(uuid()) @db.Uuid
+  partNumber  String          @map("part_number")
+  description String          @db.Text
+  quantity    Int
+  neededBy    DateTime        @map("needed_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  quotes      SupplierQuote[]
+
+  @@map("rfqs")
+}
+
+model SupplierQuote {
+  id           String   @id @default(uuid()) @db.Uuid
+  rfqId        String   @map("rfq_id") @db.Uuid
+  supplierName String   @map("supplier_name")
+  unitPrice    Decimal  @map("unit_price") @db.Decimal(12, 2)
+  leadTime     Int      @map("lead_time")
+  validUntil   DateTime @map("valid_until")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  rfq          RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+
+  @@map("supplier_quotes")
+}
