@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import { prisma } from './config/database';
+import { RedisCacheService } from './shared/infrastructure/cache/redis-cache.service';
 import { errorHandler } from './shared/middleware/errorHandler';
 
 // Auth Module
@@ -47,12 +48,16 @@ export const createApp = (): Application => {
   app.use(express.json());
   app.use(cookieParser());
 
+  // Cache Service
+  const cacheService = new RedisCacheService(60);
+
   // Health check endpoint
   app.get('/api/health', (_req: Request, res: Response) => {
     res.status(200).json({
       status: 'ok',
       service: 'quotewise-backend',
       environment: config.NODE_ENV,
+      cache: cacheService.isAvailable() ? 'connected' : 'disabled_or_offline',
       timestamp: new Date().toISOString(),
     });
   });
@@ -70,9 +75,9 @@ export const createApp = (): Application => {
   });
   const authMiddleware = createAuthMiddleware(tokenService, config.COOKIE_NAME);
 
-  // Dependency Inversion: RFQ & Quotation Modules
-  const rfqRepository = new PrismaRFQRepository(prisma);
-  const quotationRepository = new PrismaQuotationRepository(prisma);
+  // Dependency Inversion: RFQ & Quotation Modules (with Redis Cache)
+  const rfqRepository = new PrismaRFQRepository(prisma, cacheService);
+  const quotationRepository = new PrismaQuotationRepository(prisma, cacheService);
 
   const rfqUseCases = new RFQUseCases(rfqRepository, quotationRepository);
   const quotationUseCases = new QuotationUseCases(quotationRepository);

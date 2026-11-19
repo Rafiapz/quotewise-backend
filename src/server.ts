@@ -1,6 +1,7 @@
 import { createApp } from './app';
 import { config } from './config/env';
 import { prisma } from './config/database';
+import { disconnectRedis } from './config/redis';
 import { logger } from './shared/utils/logger';
 
 const app = createApp();
@@ -12,14 +13,17 @@ const server = app.listen(config.PORT, () => {
 });
 
 const gracefulShutdown = async (signal: string) => {
-  logger.info(`${signal} signal received: closing HTTP server and disconnecting Prisma`);
+  logger.info(`${signal} signal received: closing HTTP server, disconnecting Prisma and Redis`);
   server.close(async () => {
     logger.info('HTTP server closed');
     try {
-      await prisma.$disconnect();
-      logger.info('Prisma disconnected successfully');
+      await Promise.allSettled([
+        prisma.$disconnect(),
+        disconnectRedis(),
+      ]);
+      logger.info('Prisma and Redis disconnected successfully');
     } catch (err) {
-      logger.error('Error during Prisma disconnect:', err);
+      logger.error('Error during shutdown disconnect:', err);
     }
     process.exit(0);
   });

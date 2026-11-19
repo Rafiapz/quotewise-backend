@@ -8,11 +8,55 @@ import {
 } from '../../domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../domain/entities/rfq.entity';
 import { SupplierQuoteEntity } from '../../../quotation/domain/entities/quotation.entity';
+import { ICacheService } from '../../../../shared/domain/services/cache.service.interface';
+
+interface SerializedQuote {
+  id: string;
+  name: string;
+  rfqId: string;
+  unitPrice: number;
+  leadTime: string | Date;
+  validUntil: string | Date;
+  isActive: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+}
+
+interface SerializedRFQ {
+  id: string;
+  partNumber: string;
+  description: string;
+  quantity: number;
+  neededBy: string | Date;
+  userId: string;
+  isActive: boolean;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  quotes?: SerializedQuote[];
+}
+
+interface SerializedPaginatedRfqResult {
+  items: SerializedRFQ[];
+  meta: PaginatedRfqResult['meta'];
+  stats: PaginatedRfqResult['stats'];
+}
 
 export class PrismaRFQRepository implements IRFQRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly cacheService?: ICacheService
+  ) {}
 
   public async findById(id: string): Promise<RFQEntity | null> {
+    const cacheKey = `rfqs:detail:${id}`;
+
+    if (this.cacheService) {
+      const cached = await this.cacheService.get<SerializedRFQ>(cacheKey);
+      if (cached) {
+        return this.deserializeRFQ(cached);
+      }
+    }
+
     const record = await this.prisma.rFQ.findFirst({
       where: { id, isActive: true },
       include: {
@@ -23,13 +67,36 @@ export class PrismaRFQRepository implements IRFQRepository {
     });
 
     if (!record) return null;
-    return this.mapToEntity(record);
+    const entity = this.mapToEntity(record);
+
+    if (this.cacheService) {
+      await this.cacheService.set(cacheKey, entity, 120);
+    }
+
+    return entity;
   }
 
   public async findAll(options: RfqFilterOptions = {}): Promise<PaginatedRfqResult> {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 9));
     const now = new Date();
+
+    const normalizedSearch = (options.search || '').trim().toLowerCase();
+    const normalizedStatus = options.status || 'ALL';
+    const normalizedUserId = options.userId || 'all';
+
+    const cacheKey = `rfqs:list:${normalizedUserId}:${page}:${limit}:${normalizedStatus}:${normalizedSearch}`;
+
+    if (this.cacheService) {
+      const cached = await this.cacheService.get<SerializedPaginatedRfqResult>(cacheKey);
+      if (cached) {
+        return {
+          items: cached.items.map((item) => this.deserializeRFQ(item)),
+          meta: cached.meta,
+          stats: cached.stats,
+        };
+      }
+    }
 
     const where: Prisma.RFQWhereInput = {
       isActive: true,
@@ -111,7 +178,7 @@ export class PrismaRFQRepository implements IRFQRepository {
 
     const totalPages = Math.ceil(filteredTotal / limit) || 1;
 
-    return {
+    const result: PaginatedRfqResult = {
       items: records.map((record) => this.mapToEntity(record)),
       meta: {
         page,
@@ -128,6 +195,12 @@ export class PrismaRFQRepository implements IRFQRepository {
         expired: expiredCount,
       },
     };
+
+    if (this.cacheService) {
+      await this.cacheService.set(cacheKey, result, 60);
+    }
+
+    return result;
   }
 
   public async create(data: CreateRFQData): Promise<RFQEntity> {
@@ -147,6 +220,10 @@ export class PrismaRFQRepository implements IRFQRepository {
         },
       },
     });
+
+    if (this.cacheService) {
+      await this.cacheService.delByPattern('rfqs:list:*');
+    }
 
     return this.mapToEntity(record);
   }
@@ -168,6 +245,13 @@ export class PrismaRFQRepository implements IRFQRepository {
         },
       });
 
+      if (this.cacheService) {
+        await Promise.all([
+          this.cacheService.delByPattern('rfqs:list:*'),
+          this.cacheService.del(`rfqs:detail:${id}`),
+        ]);
+      }
+
       return this.mapToEntity(record);
     } catch {
       return null;
@@ -180,10 +264,49 @@ export class PrismaRFQRepository implements IRFQRepository {
         where: { id, isActive: true },
         data: { isActive: false },
       });
+
+      if (result.count > 0 && this.cacheService) {
+        await Promise.all([
+          this.cacheService.delByPattern('rfqs:list:*'),
+          this.cacheService.del(`rfqs:detail:${id}`),
+          this.cacheService.delByPattern(`quotations:rfq:${id}:*`),
+        ]);
+      }
+
       return result.count > 0;
     } catch {
       return false;
     }
+  }
+
+  private deserializeRFQ(item: SerializedRFQ): RFQEntity {
+    const quotes = (item.quotes || []).map(
+      (q) =>
+        new SupplierQuoteEntity({
+          id: q.id,
+          name: q.name,
+          rfqId: q.rfqId,
+          unitPrice: Number(q.unitPrice),
+          leadTime: new Date(q.leadTime),
+          validUntil: new Date(q.validUntil),
+          isActive: q.isActive,
+          createdAt: new Date(q.createdAt),
+          updatedAt: new Date(q.updatedAt),
+        })
+    );
+
+    return new RFQEntity({
+      id: item.id,
+      partNumber: item.partNumber,
+      description: item.description,
+      quantity: item.quantity,
+      neededBy: new Date(item.neededBy),
+      userId: item.userId,
+      isActive: item.isActive,
+      createdAt: new Date(item.createdAt),
+      updatedAt: new Date(item.updatedAt),
+      quotes,
+    });
   }
 
   private mapToEntity(record: {

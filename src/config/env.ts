@@ -11,6 +11,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().default('quotewise-jwt-secret-key-change-in-production-min32chars'),
   JWT_EXPIRES_IN: z.string().default('7d'),
   COOKIE_NAME: z.string().default('token'),
+  REDIS_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
