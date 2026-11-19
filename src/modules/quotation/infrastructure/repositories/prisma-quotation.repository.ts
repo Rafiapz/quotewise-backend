@@ -6,31 +6,9 @@ import {
   PaginatedQuotationResult,
 } from '../../domain/repositories/quotation.repository.interface';
 import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
-import { ICacheService } from '../../../../shared/domain/services/cache.service.interface';
-
-interface SerializedQuote {
-  id: string;
-  name: string;
-  rfqId: string;
-  unitPrice: number;
-  leadTime: string | Date;
-  validUntil: string | Date;
-  isActive: boolean;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-}
-
-interface SerializedPaginatedQuotationResult {
-  items: SerializedQuote[];
-  meta: PaginatedQuotationResult['meta'];
-  lowestUnitPrice?: number;
-}
 
 export class PrismaQuotationRepository implements IQuotationRepository {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly cacheService?: ICacheService
-  ) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   public async findById(id: string): Promise<SupplierQuoteEntity | null> {
     const record = await this.prisma.supplierQuote.findFirst({
@@ -47,21 +25,6 @@ export class PrismaQuotationRepository implements IQuotationRepository {
   ): Promise<PaginatedQuotationResult> {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 6));
-    const normalizedSearch = (options.search || '').trim().toLowerCase();
-    const normalizedSort = options.sortBy || 'price_asc';
-
-    const cacheKey = `quotations:rfq:${rfqId}:${page}:${limit}:${normalizedSort}:${normalizedSearch}`;
-
-    if (this.cacheService) {
-      const cached = await this.cacheService.get<SerializedPaginatedQuotationResult>(cacheKey);
-      if (cached) {
-        return {
-          items: cached.items.map((item) => this.deserializeQuote(item)),
-          meta: cached.meta,
-          lowestUnitPrice: cached.lowestUnitPrice,
-        };
-      }
-    }
 
     const where: Prisma.SupplierQuoteWhereInput = {
       rfqId,
@@ -96,9 +59,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     ]);
 
     const totalPages = Math.ceil(filteredTotal / limit) || 1;
-    const lowestUnitPrice = minPriceAgg._min.unitPrice ? Number(minPriceAgg._min.unitPrice) : undefined;
 
-    const result: PaginatedQuotationResult = {
+    return {
       items: records.map((record) => this.mapToEntity(record)),
       meta: {
         page,
@@ -108,14 +70,8 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         hasNext: page < totalPages,
         hasPrev: page > 1,
       },
-      lowestUnitPrice,
+      lowestUnitPrice: minPriceAgg._min.unitPrice ? Number(minPriceAgg._min.unitPrice) : undefined,
     };
-
-    if (this.cacheService) {
-      await this.cacheService.set(cacheKey, result, 60);
-    }
-
-    return result;
   }
 
   public async findAll(): Promise<SupplierQuoteEntity[]> {
@@ -140,37 +96,15 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       data: payload as unknown as Prisma.SupplierQuoteUncheckedCreateInput,
     });
 
-    if (this.cacheService) {
-      await Promise.all([
-        this.cacheService.delByPattern(`quotations:rfq:${data.rfqId}:*`),
-        this.cacheService.del(`rfqs:detail:${data.rfqId}`),
-        this.cacheService.delByPattern('rfqs:list:*'),
-      ]);
-    }
-
     return this.mapToEntity(record);
   }
 
   public async delete(id: string): Promise<boolean> {
     try {
-      const quote = await this.prisma.supplierQuote.findUnique({
-        where: { id },
-        select: { rfqId: true },
-      });
-
       const result = await this.prisma.supplierQuote.updateMany({
         where: { id, isActive: true },
         data: { isActive: false },
       });
-
-      if (result.count > 0 && quote && this.cacheService) {
-        await Promise.all([
-          this.cacheService.delByPattern(`quotations:rfq:${quote.rfqId}:*`),
-          this.cacheService.del(`rfqs:detail:${quote.rfqId}`),
-          this.cacheService.delByPattern('rfqs:list:*'),
-        ]);
-      }
-
       return result.count > 0;
     } catch {
       return false;
@@ -183,33 +117,10 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         where: { rfqId, isActive: true },
         data: { isActive: false },
       });
-
-      if (result.count > 0 && this.cacheService) {
-        await Promise.all([
-          this.cacheService.delByPattern(`quotations:rfq:${rfqId}:*`),
-          this.cacheService.del(`rfqs:detail:${rfqId}`),
-          this.cacheService.delByPattern('rfqs:list:*'),
-        ]);
-      }
-
       return result.count;
     } catch {
       return 0;
     }
-  }
-
-  private deserializeQuote(item: SerializedQuote): SupplierQuoteEntity {
-    return new SupplierQuoteEntity({
-      id: item.id,
-      name: item.name,
-      rfqId: item.rfqId,
-      unitPrice: Number(item.unitPrice),
-      leadTime: new Date(item.leadTime),
-      validUntil: new Date(item.validUntil),
-      isActive: item.isActive,
-      createdAt: new Date(item.createdAt),
-      updatedAt: new Date(item.updatedAt),
-    });
   }
 
   private mapToEntity(record: {
@@ -231,7 +142,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
           ? record.supplierName
           : '';
 
-      const resolvedLeadTime =
+    const resolvedLeadTime =
       record.leadTime instanceof Date
         ? record.leadTime
         : new Date(String(record.leadTime));

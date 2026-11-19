@@ -1,62 +1,18 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from "@prisma/client";
 import {
   IRFQRepository,
   CreateRFQData,
   UpdateRFQData,
   RfqFilterOptions,
   PaginatedRfqResult,
-} from '../../domain/repositories/rfq.repository.interface';
-import { RFQEntity } from '../../domain/entities/rfq.entity';
-import { SupplierQuoteEntity } from '../../../quotation/domain/entities/quotation.entity';
-import { ICacheService } from '../../../../shared/domain/services/cache.service.interface';
-
-interface SerializedQuote {
-  id: string;
-  name: string;
-  rfqId: string;
-  unitPrice: number;
-  leadTime: string | Date;
-  validUntil: string | Date;
-  isActive: boolean;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-}
-
-interface SerializedRFQ {
-  id: string;
-  partNumber: string;
-  description: string;
-  quantity: number;
-  neededBy: string | Date;
-  userId: string;
-  isActive: boolean;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-  quotes?: SerializedQuote[];
-}
-
-interface SerializedPaginatedRfqResult {
-  items: SerializedRFQ[];
-  meta: PaginatedRfqResult['meta'];
-  stats: PaginatedRfqResult['stats'];
-}
+} from "../../domain/repositories/rfq.repository.interface";
+import { RFQEntity } from "../../domain/entities/rfq.entity";
+import { SupplierQuoteEntity } from "../../../quotation/domain/entities/quotation.entity";
 
 export class PrismaRFQRepository implements IRFQRepository {
-  constructor(
-    private readonly prisma: PrismaClient,
-    private readonly cacheService?: ICacheService
-  ) {}
+  constructor(private readonly prisma: PrismaClient) {}
 
   public async findById(id: string): Promise<RFQEntity | null> {
-    const cacheKey = `rfqs:detail:${id}`;
-
-    if (this.cacheService) {
-      const cached = await this.cacheService.get<SerializedRFQ>(cacheKey);
-      if (cached) {
-        return this.deserializeRFQ(cached);
-      }
-    }
-
     const record = await this.prisma.rFQ.findFirst({
       where: { id, isActive: true },
       include: {
@@ -67,36 +23,15 @@ export class PrismaRFQRepository implements IRFQRepository {
     });
 
     if (!record) return null;
-    const entity = this.mapToEntity(record);
-
-    if (this.cacheService) {
-      await this.cacheService.set(cacheKey, entity, 120);
-    }
-
-    return entity;
+    return this.mapToEntity(record);
   }
 
-  public async findAll(options: RfqFilterOptions = {}): Promise<PaginatedRfqResult> {
+  public async findAll(
+    options: RfqFilterOptions = {},
+  ): Promise<PaginatedRfqResult> {
     const page = Math.max(1, Number(options.page) || 1);
     const limit = Math.max(1, Math.min(100, Number(options.limit) || 9));
     const now = new Date();
-
-    const normalizedSearch = (options.search || '').trim().toLowerCase();
-    const normalizedStatus = options.status || 'ALL';
-    const normalizedUserId = options.userId || 'all';
-
-    const cacheKey = `rfqs:list:${normalizedUserId}:${page}:${limit}:${normalizedStatus}:${normalizedSearch}`;
-
-    if (this.cacheService) {
-      const cached = await this.cacheService.get<SerializedPaginatedRfqResult>(cacheKey);
-      if (cached) {
-        return {
-          items: cached.items.map((item) => this.deserializeRFQ(item)),
-          meta: cached.meta,
-          stats: cached.stats,
-        };
-      }
-    }
 
     const where: Prisma.RFQWhereInput = {
       isActive: true,
@@ -109,18 +44,18 @@ export class PrismaRFQRepository implements IRFQRepository {
     if (options.search && options.search.trim()) {
       const searchTerm = options.search.trim();
       where.OR = [
-        { partNumber: { contains: searchTerm, mode: 'insensitive' } },
-        { description: { contains: searchTerm, mode: 'insensitive' } },
+        { partNumber: { contains: searchTerm, mode: "insensitive" } },
+        { description: { contains: searchTerm, mode: "insensitive" } },
       ];
     }
 
-    if (options.status && options.status !== 'ALL') {
-      if (options.status === 'EXPIRED') {
+    if (options.status && options.status !== "ALL") {
+      if (options.status === "EXPIRED") {
         where.neededBy = { lt: now };
-      } else if (options.status === 'QUOTED') {
+      } else if (options.status === "QUOTED") {
         where.neededBy = { gte: now };
         where.quotes = { some: { isActive: true } };
-      } else if (options.status === 'OPEN') {
+      } else if (options.status === "OPEN") {
         where.neededBy = { gte: now };
         where.quotes = { none: { isActive: true } };
       }
@@ -144,7 +79,7 @@ export class PrismaRFQRepository implements IRFQRepository {
             where: { isActive: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -178,7 +113,7 @@ export class PrismaRFQRepository implements IRFQRepository {
 
     const totalPages = Math.ceil(filteredTotal / limit) || 1;
 
-    const result: PaginatedRfqResult = {
+    return {
       items: records.map((record) => this.mapToEntity(record)),
       meta: {
         page,
@@ -195,12 +130,6 @@ export class PrismaRFQRepository implements IRFQRepository {
         expired: expiredCount,
       },
     };
-
-    if (this.cacheService) {
-      await this.cacheService.set(cacheKey, result, 60);
-    }
-
-    return result;
   }
 
   public async create(data: CreateRFQData): Promise<RFQEntity> {
@@ -221,14 +150,13 @@ export class PrismaRFQRepository implements IRFQRepository {
       },
     });
 
-    if (this.cacheService) {
-      await this.cacheService.delByPattern('rfqs:list:*');
-    }
-
     return this.mapToEntity(record);
   }
 
-  public async update(id: string, data: UpdateRFQData): Promise<RFQEntity | null> {
+  public async update(
+    id: string,
+    data: UpdateRFQData,
+  ): Promise<RFQEntity | null> {
     try {
       const record = await this.prisma.rFQ.update({
         where: { id },
@@ -245,13 +173,6 @@ export class PrismaRFQRepository implements IRFQRepository {
         },
       });
 
-      if (this.cacheService) {
-        await Promise.all([
-          this.cacheService.delByPattern('rfqs:list:*'),
-          this.cacheService.del(`rfqs:detail:${id}`),
-        ]);
-      }
-
       return this.mapToEntity(record);
     } catch {
       return null;
@@ -264,49 +185,10 @@ export class PrismaRFQRepository implements IRFQRepository {
         where: { id, isActive: true },
         data: { isActive: false },
       });
-
-      if (result.count > 0 && this.cacheService) {
-        await Promise.all([
-          this.cacheService.delByPattern('rfqs:list:*'),
-          this.cacheService.del(`rfqs:detail:${id}`),
-          this.cacheService.delByPattern(`quotations:rfq:${id}:*`),
-        ]);
-      }
-
       return result.count > 0;
     } catch {
       return false;
     }
-  }
-
-  private deserializeRFQ(item: SerializedRFQ): RFQEntity {
-    const quotes = (item.quotes || []).map(
-      (q) =>
-        new SupplierQuoteEntity({
-          id: q.id,
-          name: q.name,
-          rfqId: q.rfqId,
-          unitPrice: Number(q.unitPrice),
-          leadTime: new Date(q.leadTime),
-          validUntil: new Date(q.validUntil),
-          isActive: q.isActive,
-          createdAt: new Date(q.createdAt),
-          updatedAt: new Date(q.updatedAt),
-        })
-    );
-
-    return new RFQEntity({
-      id: item.id,
-      partNumber: item.partNumber,
-      description: item.description,
-      quantity: item.quantity,
-      neededBy: new Date(item.neededBy),
-      userId: item.userId,
-      isActive: item.isActive,
-      createdAt: new Date(item.createdAt),
-      updatedAt: new Date(item.updatedAt),
-      quotes,
-    });
   }
 
   private mapToEntity(record: {
@@ -334,16 +216,14 @@ export class PrismaRFQRepository implements IRFQRepository {
   }): RFQEntity {
     const quoteEntities = (record.quotes || []).map((q) => {
       const resolvedName =
-        typeof q.name === 'string'
+        typeof q.name === "string"
           ? q.name
-          : typeof q.supplierName === 'string'
+          : typeof q.supplierName === "string"
             ? q.supplierName
-            : '';
+            : "";
 
       const resolvedLeadTime =
-        q.leadTime instanceof Date
-          ? q.leadTime
-          : new Date(String(q.leadTime));
+        q.leadTime instanceof Date ? q.leadTime : new Date(String(q.leadTime));
 
       return new SupplierQuoteEntity({
         id: q.id,

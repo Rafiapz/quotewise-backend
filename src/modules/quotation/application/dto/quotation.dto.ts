@@ -1,39 +1,42 @@
-import { z } from 'zod';
+/**
+ * Pure Application Layer Data Transfer Objects (DTOs) for Quotation Module.
+ * Decoupled from HTTP libraries, validation frameworks (Zod), and database models.
+ */
 
-export const createQuotationSchema = z.object({
-  name: z.string().min(1, 'Supplier name is required').max(200).trim(),
-  rfqId: z.string().uuid('Valid RFQ ID is required'),
-  unitPrice: z.coerce.number().positive('Unit price must be a positive number'),
-  leadTime: z.union([
-    z.coerce.number().int().positive('Lead time in days must be a positive integer'),
-    z.string().min(1, 'Lead time is required'),
-  ]),
-  validUntil: z
-    .string()
-    .min(1, 'Valid until date is required')
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: 'validUntil must be a valid date string',
-    }),
-});
+export interface CreateQuotationDTO {
+  name: string;
+  rfqId: string;
+  unitPrice: number;
+  leadTime: number | string;
+  validUntil: string;
+}
 
-export const quotationIdParamSchema = z.object({
-  id: z.string().uuid('Invalid quotation ID format'),
-});
+export interface CreateQuotationForRfqBodyDTO {
+  name: string;
+  rfqId?: string;
+  unitPrice: number;
+  leadTime: number | string;
+  validUntil: string;
+}
 
-export const rfqIdParamForQuotationSchema = z.object({
-  rfqId: z.string().uuid('Invalid RFQ ID format'),
-});
+export interface QuotationIdParamDTO {
+  id: string;
+}
 
-export const quotationQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(6),
-  search: z.string().optional(),
-  sortBy: z.enum(['price_asc', 'price_desc', 'lead_asc', 'recent']).optional().default('price_asc'),
-});
+export interface RfqIdParamForQuotationDTO {
+  rfqId: string;
+}
 
-export type CreateQuotationDTO = z.infer<typeof createQuotationSchema>;
-export type QuotationIdParamDTO = z.infer<typeof quotationIdParamSchema>;
-export type QuotationQueryDTO = z.infer<typeof quotationQuerySchema>;
+export interface QuotationQueryDTO {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: 'price_asc' | 'price_desc' | 'lead_asc' | 'recent';
+}
+
+export interface QuotationListQueryDTO extends QuotationQueryDTO {
+  rfqId?: string;
+}
 
 export interface SupplierQuoteResponseDTO {
   id: string;
@@ -43,6 +46,7 @@ export interface SupplierQuoteResponseDTO {
   leadTime: string;
   leadTimeDays: number;
   validUntil: string;
+  isBestPrice?: boolean;
   createdAt: string;
   updatedAt: string;
 }

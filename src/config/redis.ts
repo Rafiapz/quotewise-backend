@@ -1,85 +1,78 @@
-import Redis, { Redis as RedisClient } from 'ioredis';
-import { config } from './env';
-import { logger } from '../shared/utils/logger';
+import Redis, { RedisOptions } from "ioredis";
+import { config } from "./env";
+import { logger } from "../shared/utils/logger";
 
-let redisClient: RedisClient | null = null;
-let isConnected = false;
+let redisInstance: Redis | null = null;
 
-export const initRedis = (): RedisClient | null => {
-  if (!config.REDIS_URL) {
-    logger.warn('REDIS_URL is not defined in environment variables. Caching will be disabled.');
+export const createRedisClient = (): Redis | null => {
+  const redisUrl = config.REDIS_URL;
+
+  if (!redisUrl) {
+    logger.warn(
+      "REDIS_URL not configured. Cache will operate in fallback / pass-through mode.",
+    );
     return null;
-  }
-
-  if (redisClient) {
-    return redisClient;
   }
 
   try {
-    const isTls = config.REDIS_URL.startsWith('rediss://');
-
-    redisClient = new Redis(config.REDIS_URL, {
-      tls: isTls ? { rejectUnauthorized: false } : undefined,
-      maxRetriesPerRequest: 2,
-      connectTimeout: 5000,
+    const options: RedisOptions = {
+      maxRetriesPerRequest: 3,
       lazyConnect: false,
-      retryStrategy: (times) => {
+      enableReadyCheck: true,
+      retryStrategy: (times: number) => {
         if (times > 5) {
-          logger.warn('Redis reconnection limit reached. Operating in fail-open cache mode.');
+          logger.warn(
+            `Redis connection retry limit reached (${times} attempts). Stopping reconnect.`,
+          );
           return null; // Stop retrying
         }
-        return Math.min(times * 500, 2000);
+        const delay = Math.min(times * 200, 2000);
+        return delay;
       },
+    };
+
+    const client = new Redis(redisUrl, options);
+
+    client.on("connect", () => {
+      logger.info("Connected to Redis server");
     });
 
-    redisClient.on('connect', () => {
-      logger.info('Connected to Redis');
+    client.on("ready", () => {
+      logger.info("Redis client is ready to accept commands");
     });
 
-    redisClient.on('ready', () => {
-      isConnected = true;
-      logger.info('Redis connection is ready for caching operations');
+    client.on("error", (err) => {
+      logger.error("Redis connection error:", err.message);
     });
 
-    redisClient.on('error', (err: Error) => {
-      isConnected = false;
-      logger.warn(`Redis connection warning: ${err.message}. Cache operations will bypass safely.`);
+    client.on("close", () => {
+      logger.warn("Redis connection closed");
     });
 
-    redisClient.on('close', () => {
-      isConnected = false;
-    });
-
-    return redisClient;
+    return client;
   } catch (error) {
-    logger.error('Failed to initialize Redis client:', error);
-    redisClient = null;
-    isConnected = false;
+    logger.error("Failed to initialize Redis client:", error);
     return null;
   }
 };
 
-export const getRedisClient = (): RedisClient | null => {
-  if (!redisClient && config.REDIS_URL) {
-    return initRedis();
+export const getRedisClient = (): Redis | null => {
+  if (!redisInstance && config.REDIS_URL) {
+    redisInstance = createRedisClient();
   }
-  return redisClient;
-};
-
-export const isRedisReady = (): boolean => {
-  return isConnected && redisClient !== null && redisClient.status === 'ready';
+  return redisInstance;
 };
 
 export const disconnectRedis = async (): Promise<void> => {
-  if (redisClient) {
+  if (redisInstance) {
     try {
-      await redisClient.quit();
-      logger.info('Redis client disconnected cleanly');
-    } catch {
-      redisClient.disconnect();
+      await redisInstance.quit();
+      logger.info("Redis disconnected gracefully");
+    } catch (err) {
+      logger.error("Error during Redis disconnect:", err);
+      redisInstance.disconnect();
     } finally {
-      redisClient = null;
-      isConnected = false;
+      redisInstance = null;
     }
   }
 };

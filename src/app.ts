@@ -5,7 +5,6 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import { prisma } from './config/database';
-import { RedisCacheService } from './shared/infrastructure/cache/redis-cache.service';
 import { errorHandler } from './shared/middleware/errorHandler';
 
 // Auth Module
@@ -18,16 +17,22 @@ import { createAuthRouter } from './modules/auth/presentation/routes/auth.routes
 import { createAuthMiddleware } from './shared/middleware/auth.middleware';
 
 // RFQ Module
-import { PrismaRFQRepository } from './modules/rfq/infrastructure/repositories/prisma-rfq.repository';
-import { RFQUseCases } from './modules/rfq/application/use-cases/rfq.use-cases';
-import { RFQController } from './modules/rfq/presentation/controllers/rfq.controller';
-import { createRfqRouter } from './modules/rfq/presentation/routes/rfq.routes';
+import { PrismaRFQRepository } from "./modules/rfq/infrastructure/repositories/prisma-rfq.repository";
+import { CachedRFQRepository } from "./modules/rfq/infrastructure/repositories/cached-rfq.repository";
+import { RFQUseCases } from "./modules/rfq/application/use-cases/rfq.use-cases";
+import { RFQController } from "./modules/rfq/presentation/controllers/rfq.controller";
+import { createRfqRouter } from "./modules/rfq/presentation/routes/rfq.routes";
 
 // Quotation Module
-import { PrismaQuotationRepository } from './modules/quotation/infrastructure/repositories/prisma-quotation.repository';
-import { QuotationUseCases } from './modules/quotation/application/use-cases/quotation.use-cases';
-import { QuotationController } from './modules/quotation/presentation/controllers/quotation.controller';
-import { createQuotationRouter } from './modules/quotation/presentation/routes/quotation.routes';
+import { PrismaQuotationRepository } from "./modules/quotation/infrastructure/repositories/prisma-quotation.repository";
+import { CachedQuotationRepository } from "./modules/quotation/infrastructure/repositories/cached-quotation.repository";
+import { QuotationUseCases } from "./modules/quotation/application/use-cases/quotation.use-cases";
+import { QuotationController } from "./modules/quotation/presentation/controllers/quotation.controller";
+import { createQuotationRouter } from "./modules/quotation/presentation/routes/quotation.routes";
+
+// Cache Infrastructure
+import { getRedisClient } from "./config/redis";
+import { RedisCacheService } from "./shared/infrastructure/cache/redis-cache.service";
 
 export const createApp = (): Application => {
   const app = express();
@@ -48,16 +53,12 @@ export const createApp = (): Application => {
   app.use(express.json());
   app.use(cookieParser());
 
-  // Cache Service
-  const cacheService = new RedisCacheService(60);
-
   // Health check endpoint
   app.get('/api/health', (_req: Request, res: Response) => {
     res.status(200).json({
       status: 'ok',
       service: 'quotewise-backend',
       environment: config.NODE_ENV,
-      cache: cacheService.isAvailable() ? 'connected' : 'disabled_or_offline',
       timestamp: new Date().toISOString(),
     });
   });
@@ -75,9 +76,22 @@ export const createApp = (): Application => {
   });
   const authMiddleware = createAuthMiddleware(tokenService, config.COOKIE_NAME);
 
-  // Dependency Inversion: RFQ & Quotation Modules (with Redis Cache)
-  const rfqRepository = new PrismaRFQRepository(prisma, cacheService);
-  const quotationRepository = new PrismaQuotationRepository(prisma, cacheService);
+  // Cache Infrastructure & Dependency Inversion
+  const redisClient = getRedisClient();
+  const cacheService = new RedisCacheService(redisClient);
+
+  // Dependency Inversion: RFQ & Quotation Modules with Caching Decorators
+  const prismaRfqRepository = new PrismaRFQRepository(prisma);
+  const prismaQuotationRepository = new PrismaQuotationRepository(prisma);
+
+  const rfqRepository = new CachedRFQRepository(
+    prismaRfqRepository,
+    cacheService,
+  );
+  const quotationRepository = new CachedQuotationRepository(
+    prismaQuotationRepository,
+    cacheService,
+  );
 
   const rfqUseCases = new RFQUseCases(rfqRepository, quotationRepository);
   const quotationUseCases = new QuotationUseCases(quotationRepository);

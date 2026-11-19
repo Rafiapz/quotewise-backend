@@ -5,6 +5,7 @@ import {
 } from '../../domain/repositories/quotation.repository.interface';
 import { CreateQuotationDTO } from '../dto/quotation.dto';
 import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
+import { NotFoundError } from '../../../../shared/errors/AppError';
 
 export class QuotationUseCases {
   constructor(private readonly quotationRepository: IQuotationRepository) {}
@@ -41,5 +42,19 @@ export class QuotationUseCases {
 
   public async getAllQuotations(): Promise<SupplierQuoteEntity[]> {
     return this.quotationRepository.findAll();
+  }
+
+  public async deleteQuotation(id: string): Promise<boolean> {
+    const existing = await this.quotationRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError(`Quotation with ID ${id} not found`);
+    }
+
+    const deleted = await this.quotationRepository.delete(id);
+    if (!deleted) {
+      throw new NotFoundError(`Quotation with ID ${id} could not be deleted`);
+    }
+
+    return true;
   }
 }

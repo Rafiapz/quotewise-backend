@@ -141,6 +141,40 @@ export class RFQController {
     }
   };
 
+  public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const updated = await this.rfqUseCases.updateRfq(req.params.id, req.body);
+      res.status(200).json({
+        success: true,
+        message: 'RFQ updated successfully',
+        data: {
+          id: updated.id,
+          partNumber: updated.partNumber,
+          description: updated.description,
+          quantity: updated.quantity,
+          neededBy: updated.neededBy.toISOString(),
+          userId: updated.userId,
+          createdAt: updated.createdAt.toISOString(),
+          updatedAt: updated.updatedAt.toISOString(),
+          status: updated.status,
+          quoteCount: updated.quoteCount,
+          bestQuote: updated.bestQuote
+            ? {
+                id: updated.bestQuote.id,
+                name: updated.bestQuote.name,
+                unitPrice: updated.bestQuote.unitPrice,
+                leadTime: updated.bestQuote.leadTime.toISOString(),
+                leadTimeDays: calculateLeadTimeDays(updated.bestQuote.leadTime, updated.bestQuote.createdAt),
+                validUntil: updated.bestQuote.validUntil.toISOString(),
+              }
+            : null,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.rfqUseCases.deleteRfq(req.params.id);

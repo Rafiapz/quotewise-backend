@@ -1,36 +1,34 @@
-import { z } from 'zod';
+/**
+ * Pure Application Layer Data Transfer Objects (DTOs) for RFQ Module.
+ * Decoupled from HTTP libraries, validation frameworks (Zod), and database models.
+ */
 
-export const createRfqSchema = z.object({
-  partNumber: z.string().min(1, 'Part number is required').max(100).trim(),
-  description: z.string().min(1, 'Description is required').trim(),
-  quantity: z.coerce.number().int().positive('Quantity must be a positive integer'),
-  neededBy: z
-    .string()
-    .min(1, 'Needed by date is required')
-    .refine((val) => !isNaN(Date.parse(val)), {
-      message: 'neededBy must be a valid date string',
-    }),
-  userId: z.string().uuid('Valid user ID is required').optional(),
-});
+export interface CreateRfqDTO {
+  partNumber: string;
+  description: string;
+  quantity: number;
+  neededBy: string;
+  userId: string;
+}
 
-export const updateRfqSchema = createRfqSchema.partial().omit({ userId: true });
+export interface UpdateRfqDTO {
+  partNumber?: string;
+  description?: string;
+  quantity?: number;
+  neededBy?: string;
+}
 
-export const rfqIdParamSchema = z.object({
-  id: z.string().uuid('Invalid RFQ ID format'),
-});
+export interface RfqIdParamDTO {
+  id: string;
+}
 
-export const rfqQuerySchema = z.object({
-  page: z.coerce.number().int().positive().optional().default(1),
-  limit: z.coerce.number().int().positive().max(100).optional().default(9),
-  search: z.string().optional(),
-  status: z.enum(['ALL', 'OPEN', 'QUOTED', 'EXPIRED']).optional().default('ALL'),
-  userId: z.string().uuid().optional(),
-});
-
-export type CreateRfqDTO = z.infer<typeof createRfqSchema> & { userId: string };
-export type UpdateRfqDTO = z.infer<typeof updateRfqSchema>;
-export type RfqIdParamDTO = z.infer<typeof rfqIdParamSchema>;
-export type RfqQueryDTO = z.infer<typeof rfqQuerySchema>;
+export interface RfqQueryDTO {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: 'ALL' | 'OPEN' | 'QUOTED' | 'EXPIRED';
+  userId?: string;
+}
 
 export interface RfqResponseDTO {
   id: string;
@@ -48,6 +46,7 @@ export interface RfqResponseDTO {
     name: string;
     unitPrice: number;
     leadTime: string;
+    leadTimeDays: number;
     validUntil: string;
   } | null;
 }

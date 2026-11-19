@@ -136,4 +136,16 @@ export class QuotationController {
       next(error);
     }
   };
+
+  public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await this.quotationUseCases.deleteQuotation(req.params.id);
+      res.status(200).json({
+        success: true,
+        message: 'Supplier quotation deleted successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

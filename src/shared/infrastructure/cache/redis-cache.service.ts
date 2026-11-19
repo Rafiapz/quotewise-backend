@@ -1,105 +1,103 @@
-import { ICacheService } from '../../domain/services/cache.service.interface';
-import { getRedisClient, isRedisReady } from '../../../config/redis';
-import { logger } from '../../utils/logger';
+import Redis from "ioredis";
+import { ICacheService } from "../../domain/services/cache.service.interface";
+import { logger } from "../../utils/logger";
 
 export class RedisCacheService implements ICacheService {
-  private readonly defaultTtl: number;
-
-  constructor(defaultTtlSeconds: number = 60) {
-    this.defaultTtl = defaultTtlSeconds;
-  }
-
-  public isAvailable(): boolean {
-    return isRedisReady();
-  }
+  constructor(
+    private readonly redis: Redis | null,
+    private readonly defaultTTL: number = 300, // 5 minutes default
+  ) {}
 
   public async get<T>(key: string): Promise<T | null> {
-    const client = getRedisClient();
-    if (!client || !this.isAvailable()) {
-      return null;
-    }
+    if (!this.redis) return null;
 
     try {
-      const data = await client.get(key);
+      const data = await this.redis.get(key);
       if (!data) return null;
+
       return JSON.parse(data) as T;
     } catch (error) {
-      logger.warn(`Redis get failed for key "${key}":`, error);
+      logger.error(`RedisCacheService.get error for key "${key}":`, error);
       return null;
     }
   }
 
-  public async set(key: string, value: unknown, ttlSeconds?: number): Promise<void> {
-    const client = getRedisClient();
-    if (!client || !this.isAvailable()) {
-      return;
-    }
+  public async set(
+    key: string,
+    value: unknown,
+    ttlSeconds?: number,
+  ): Promise<void> {
+    if (!this.redis) return;
 
     try {
       const serialized = JSON.stringify(value);
-      const ttl = ttlSeconds ?? this.defaultTtl;
+      const ttl = ttlSeconds !== undefined ? ttlSeconds : this.defaultTTL;
+
       if (ttl > 0) {
-        await client.set(key, serialized, 'EX', ttl);
+        await this.redis.set(key, serialized, "EX", ttl);
       } else {
-        await client.set(key, serialized);
+        await this.redis.set(key, serialized);
       }
     } catch (error) {
-      logger.warn(`Redis set failed for key "${key}":`, error);
+      logger.error(`RedisCacheService.set error for key "${key}":`, error);
     }
   }
 
   public async del(key: string): Promise<void> {
-    const client = getRedisClient();
-    if (!client || !this.isAvailable()) {
-      return;
-    }
+    if (!this.redis) return;
 
     try {
-      await client.del(key);
+      await this.redis.del(key);
     } catch (error) {
-      logger.warn(`Redis del failed for key "${key}":`, error);
+      logger.error(`RedisCacheService.del error for key "${key}":`, error);
     }
   }
 
   public async delByPattern(pattern: string): Promise<void> {
-    const client = getRedisClient();
-    if (!client || !this.isAvailable()) {
-      return;
-    }
+    if (!this.redis) return;
 
     try {
-      const stream = client.scanStream({
-        match: pattern,
-        count: 50,
-      });
-
-      const keysToDelete: string[] = [];
-
-      stream.on('data', (resultKeys: string[]) => {
-        for (const k of resultKeys) {
-          keysToDelete.push(k);
+      let cursor = "0";
+      do {
+        const [nextCursor, keys] = await this.redis.scan(
+          cursor,
+          "MATCH",
+          pattern,
+          "COUNT",
+          100,
+        );
+        cursor = nextCursor;
+        if (keys.length > 0) {
+          await this.redis.del(...keys);
         }
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        stream.on('end', async () => {
-          try {
-            if (keysToDelete.length > 0) {
-              const pipeline = client.pipeline();
-              for (const key of keysToDelete) {
-                pipeline.del(key);
-              }
-              await pipeline.exec();
-            }
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
-        });
-        stream.on('error', (err) => reject(err));
-      });
+      } while (cursor !== "0");
     } catch (error) {
-      logger.warn(`Redis delByPattern failed for pattern "${pattern}":`, error);
+      logger.error(
+        `RedisCacheService.delByPattern error for pattern "${pattern}":`,
+        error,
+      );
+    }
+  }
+
+  public async has(key: string): Promise<boolean> {
+    if (!this.redis) return false;
+
+    try {
+      const count = await this.redis.exists(key);
+      return count > 0;
+    } catch (error) {
+      logger.error(`RedisCacheService.has error for key "${key}":`, error);
+      return false;
+    }
+  }
+
+  public async flush(): Promise<void> {
+    if (!this.redis) return;
+
+    try {
+      await this.redis.flushdb();
+    } catch (error) {
+      logger.error("RedisCacheService.flush error:", error);
     }
   }
 }
