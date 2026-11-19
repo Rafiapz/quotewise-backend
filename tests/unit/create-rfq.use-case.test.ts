@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { CreateRfqUseCase } from '../../src/modules/rfq/application/use-cases/rfq.use-cases';
+import { RFQUseCases } from '../../src/modules/rfq/application/use-cases/rfq.use-cases';
 import { IRFQRepository } from '../../src/modules/rfq/domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../src/modules/rfq/domain/entities/rfq.entity';
-import { DomainError } from '../../src/shared/errors/AppError';
+import { DomainError, NotFoundError } from '../../src/shared/errors/AppError';
 
-describe('CreateRfqUseCase Unit Tests', () => {
+describe('RFQUseCases Application Service Unit Tests', () => {
   const mockRepo: IRFQRepository = {
     findById: vi.fn(),
     findAll: vi.fn(),
@@ -14,14 +14,14 @@ describe('CreateRfqUseCase Unit Tests', () => {
     exists: vi.fn(),
   };
 
-  const useCase = new CreateRfqUseCase(mockRepo);
+  const useCases = new RFQUseCases(mockRepo);
 
-  it('should throw DomainError when neededBy date is in the past', async () => {
+  it('createRfq should throw DomainError when neededBy date is in the past', async () => {
     const pastDate = new Date();
     pastDate.setDate(pastDate.getDate() - 1);
 
     await expect(
-      useCase.execute({
+      useCases.createRfq({
         partNumber: 'brg-100',
         description: 'Test Bearing',
         quantity: 10,
@@ -30,7 +30,7 @@ describe('CreateRfqUseCase Unit Tests', () => {
     ).rejects.toThrow(DomainError);
   });
 
-  it('should call repository create with uppercase partNumber and future neededBy', async () => {
+  it('createRfq should call repository create with uppercase partNumber and future neededBy', async () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);
 
@@ -47,7 +47,7 @@ describe('CreateRfqUseCase Unit Tests', () => {
 
     vi.mocked(mockRepo.create).mockResolvedValueOnce(createdEntity);
 
-    const result = await useCase.execute({
+    const result = await useCases.createRfq({
       partNumber: 'brg-100',
       description: 'Test Bearing',
       quantity: 10,
@@ -61,5 +61,19 @@ describe('CreateRfqUseCase Unit Tests', () => {
         quantity: 10,
       })
     );
+  });
+
+  it('getRfqById should throw NotFoundError when RFQ does not exist', async () => {
+    vi.mocked(mockRepo.findById).mockResolvedValueOnce(null);
+
+    await expect(useCases.getRfqById('non-existent-id')).rejects.toThrow(NotFoundError);
+  });
+
+  it('getRfqList should return all RFQs from repository', async () => {
+    vi.mocked(mockRepo.findAll).mockResolvedValueOnce([]);
+
+    const result = await useCases.getRfqList();
+    expect(result).toEqual([]);
+    expect(mockRepo.findAll).toHaveBeenCalled();
   });
 });

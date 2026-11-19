@@ -9,20 +9,13 @@ import { notFoundHandler } from './shared/middleware/notFoundHandler';
 
 // RFQ Module
 import { PrismaRFQRepository } from './modules/rfq/infrastructure/repositories/prisma-rfq.repository';
-import {
-  CreateRfqUseCase,
-  GetRfqListUseCase,
-  GetRfqByIdUseCase,
-} from './modules/rfq/application/use-cases/rfq.use-cases';
+import { RFQUseCases } from './modules/rfq/application/use-cases/rfq.use-cases';
 import { RFQController } from './modules/rfq/presentation/controllers/rfq.controller';
 import { createRfqRouter } from './modules/rfq/presentation/routes/rfq.routes';
 
 // Quotation Module
 import { PrismaQuotationRepository } from './modules/quotation/infrastructure/repositories/prisma-quotation.repository';
-import {
-  CreateQuotationUseCase,
-  GetQuotationsByRfqUseCase,
-} from './modules/quotation/application/use-cases/quotation.use-cases';
+import { QuotationUseCases } from './modules/quotation/application/use-cases/quotation.use-cases';
 import { QuotationController } from './modules/quotation/presentation/controllers/quotation.controller';
 import { createQuotationRouter } from './modules/quotation/presentation/routes/quotation.routes';
 
@@ -69,26 +62,13 @@ export const createApp = (): Application => {
   const rfqRepository = new PrismaRFQRepository(prisma);
   const quotationRepository = new PrismaQuotationRepository(prisma);
 
-  // Wire Use Cases
-  const createRfqUseCase = new CreateRfqUseCase(rfqRepository);
-  const getRfqListUseCase = new GetRfqListUseCase(rfqRepository);
-  const getRfqByIdUseCase = new GetRfqByIdUseCase(rfqRepository);
-
-  const createQuotationUseCase = new CreateQuotationUseCase(quotationRepository, rfqRepository);
-  const getQuotationsByRfqUseCase = new GetQuotationsByRfqUseCase(quotationRepository, rfqRepository);
+  // Wire Application Services (Use Cases)
+  const rfqUseCases = new RFQUseCases(rfqRepository);
+  const quotationUseCases = new QuotationUseCases(quotationRepository, rfqRepository);
 
   // Wire Controllers
-  const rfqController = new RFQController(
-    createRfqUseCase,
-    getRfqListUseCase,
-    getRfqByIdUseCase
-  );
-
-  const quotationController = new QuotationController(
-    createQuotationUseCase,
-    getQuotationsByRfqUseCase,
-    quotationRepository
-  );
+  const rfqController = new RFQController(rfqUseCases);
+  const quotationController = new QuotationController(quotationUseCases);
 
   // Register Presentation Routes
   app.use('/api/rfqs', createRfqRouter(rfqController, quotationController));

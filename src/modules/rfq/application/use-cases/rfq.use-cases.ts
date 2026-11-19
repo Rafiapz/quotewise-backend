@@ -4,13 +4,19 @@ import { RFQEntity } from '../../domain/entities/rfq.entity';
 import { NotFoundError, DomainError } from '../../../../shared/errors/AppError';
 
 /**
- * Use Case: Create a new Request for Quotation (RFQ)
- * Enforces business rule that neededBy deadline must be in the future.
+ * RFQUseCases (Application Service)
+ * Encapsulates all RFQ business use cases within a single cohesive class.
+ * Adheres strictly to Clean Architecture by orchestrating domain entities
+ * and repository interfaces with zero dependency on frameworks or databases.
  */
-export class CreateRfqUseCase {
+export class RFQUseCases {
   constructor(private readonly rfqRepository: IRFQRepository) {}
 
-  public async execute(dto: CreateRfqDTO): Promise<RFQEntity> {
+  /**
+   * Use Case: Create a new Request for Quotation (RFQ)
+   * Enforces business rule that neededBy deadline must be in the future.
+   */
+  public async createRfq(dto: CreateRfqDTO): Promise<RFQEntity> {
     const neededByDate = new Date(dto.neededBy);
     const now = new Date();
 
@@ -25,26 +31,18 @@ export class CreateRfqUseCase {
       neededBy: neededByDate,
     });
   }
-}
 
-/**
- * Use Case: Retrieve all RFQs with dynamic statuses and quotation counts
- */
-export class GetRfqListUseCase {
-  constructor(private readonly rfqRepository: IRFQRepository) {}
-
-  public async execute(): Promise<RFQEntity[]> {
+  /**
+   * Use Case: Retrieve all RFQs with dynamic statuses and best quotation calculations
+   */
+  public async getRfqList(): Promise<RFQEntity[]> {
     return this.rfqRepository.findAll();
   }
-}
 
-/**
- * Use Case: Retrieve a single RFQ by ID along with its supplier quotes
- */
-export class GetRfqByIdUseCase {
-  constructor(private readonly rfqRepository: IRFQRepository) {}
-
-  public async execute(id: string): Promise<RFQEntity> {
+  /**
+   * Use Case: Retrieve a single RFQ by ID along with its supplier quotes
+   */
+  public async getRfqById(id: string): Promise<RFQEntity> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found`);

@@ -1,25 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  CreateQuotationUseCase,
-  GetQuotationsByRfqUseCase,
-} from '../../application/use-cases/quotation.use-cases';
-import { IQuotationRepository } from '../../domain/repositories/quotation.repository.interface';
+import { QuotationUseCases } from '../../application/use-cases/quotation.use-cases';
 import { CreateQuotationDTO } from '../../application/dto/quotation.dto';
 
 export class QuotationController {
-  constructor(
-    private readonly createQuotationUseCase: CreateQuotationUseCase,
-    private readonly getQuotationsByRfqUseCase: GetQuotationsByRfqUseCase,
-    private readonly quotationRepository: IQuotationRepository
-  ) {}
+  constructor(private readonly quotationUseCases: QuotationUseCases) {}
 
   public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const rfqId = req.query.rfqId as string | undefined;
 
       const quotes = rfqId
-        ? await this.getQuotationsByRfqUseCase.execute(rfqId)
-        : await this.quotationRepository.findAll();
+        ? await this.quotationUseCases.getQuotationsByRfq(rfqId)
+        : await this.quotationUseCases.getAllQuotations();
 
       res.status(200).json({
         success: true,
@@ -42,7 +34,7 @@ export class QuotationController {
   public getByRfq = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const rfqId = req.params.rfqId || req.params.id;
-      const quotes = await this.getQuotationsByRfqUseCase.execute(rfqId);
+      const quotes = await this.quotationUseCases.getQuotationsByRfq(rfqId);
 
       res.status(200).json({
         success: true,
@@ -65,7 +57,7 @@ export class QuotationController {
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: CreateQuotationDTO = req.body;
-      const quote = await this.createQuotationUseCase.execute(dto);
+      const quote = await this.quotationUseCases.createQuotation(dto);
 
       res.status(201).json({
         success: true,

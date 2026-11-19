@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { CreateQuotationUseCase } from '../../src/modules/quotation/application/use-cases/quotation.use-cases';
+import { QuotationUseCases } from '../../src/modules/quotation/application/use-cases/quotation.use-cases';
 import { IQuotationRepository } from '../../src/modules/quotation/domain/repositories/quotation.repository.interface';
 import { IRFQRepository } from '../../src/modules/rfq/domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../src/modules/rfq/domain/entities/rfq.entity';
 import { SupplierQuoteEntity } from '../../src/modules/quotation/domain/entities/quotation.entity';
 import { NotFoundError, DomainError } from '../../src/shared/errors/AppError';
 
-describe('CreateQuotationUseCase Unit Tests', () => {
+describe('QuotationUseCases Application Service Unit Tests', () => {
   const mockQuoteRepo: IQuotationRepository = {
     findById: vi.fn(),
     findByRfqId: vi.fn(),
@@ -24,16 +24,16 @@ describe('CreateQuotationUseCase Unit Tests', () => {
     exists: vi.fn(),
   };
 
-  const useCase = new CreateQuotationUseCase(mockQuoteRepo, mockRfqRepo);
+  const useCases = new QuotationUseCases(mockQuoteRepo, mockRfqRepo);
 
-  it('should throw NotFoundError if RFQ does not exist', async () => {
+  it('createQuotation should throw NotFoundError if RFQ does not exist', async () => {
     vi.mocked(mockRfqRepo.findById).mockResolvedValueOnce(null);
 
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 5);
 
     await expect(
-      useCase.execute({
+      useCases.createQuotation({
         rfqId: 'non-existent-rfq',
         supplierName: 'Acme Fasteners',
         unitPrice: 15.0,
@@ -43,7 +43,7 @@ describe('CreateQuotationUseCase Unit Tests', () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it('should throw DomainError if RFQ deadline has expired', async () => {
+  it('createQuotation should throw DomainError if RFQ deadline has expired', async () => {
     const pastDate = new Date();
     pastDate.setDate(pastDate.getDate() - 3);
 
@@ -64,7 +64,7 @@ describe('CreateQuotationUseCase Unit Tests', () => {
     futureDate.setDate(futureDate.getDate() + 5);
 
     await expect(
-      useCase.execute({
+      useCases.createQuotation({
         rfqId: 'expired-rfq',
         supplierName: 'Acme Fasteners',
         unitPrice: 15.0,
@@ -74,7 +74,7 @@ describe('CreateQuotationUseCase Unit Tests', () => {
     ).rejects.toThrow(DomainError);
   });
 
-  it('should create quotation when RFQ is active and validity date is in future', async () => {
+  it('createQuotation should create quotation when RFQ is active and validity date is in future', async () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);
 
@@ -103,7 +103,7 @@ describe('CreateQuotationUseCase Unit Tests', () => {
     vi.mocked(mockRfqRepo.findById).mockResolvedValueOnce(activeRfq);
     vi.mocked(mockQuoteRepo.create).mockResolvedValueOnce(createdQuote);
 
-    const result = await useCase.execute({
+    const result = await useCases.createQuotation({
       rfqId: 'active-rfq',
       supplierName: 'Fast Supplier',
       unitPrice: 22.5,
@@ -113,5 +113,19 @@ describe('CreateQuotationUseCase Unit Tests', () => {
 
     expect(result.supplierName).toBe('Fast Supplier');
     expect(result.unitPrice).toBe(22.5);
+  });
+
+  it('getQuotationsByRfq should throw NotFoundError if RFQ does not exist', async () => {
+    vi.mocked(mockRfqRepo.findById).mockResolvedValueOnce(null);
+
+    await expect(useCases.getQuotationsByRfq('non-existent-rfq')).rejects.toThrow(NotFoundError);
+  });
+
+  it('getAllQuotations should delegate to repository findAll', async () => {
+    vi.mocked(mockQuoteRepo.findAll).mockResolvedValueOnce([]);
+
+    const result = await useCases.getAllQuotations();
+    expect(result).toEqual([]);
+    expect(mockQuoteRepo.findAll).toHaveBeenCalled();
   });
 });

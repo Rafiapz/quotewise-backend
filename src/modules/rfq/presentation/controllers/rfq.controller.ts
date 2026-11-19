@@ -1,21 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  CreateRfqUseCase,
-  GetRfqListUseCase,
-  GetRfqByIdUseCase,
-} from '../../application/use-cases/rfq.use-cases';
+import { RFQUseCases } from '../../application/use-cases/rfq.use-cases';
 import { CreateRfqDTO } from '../../application/dto/rfq.dto';
 
 export class RFQController {
-  constructor(
-    private readonly createRfqUseCase: CreateRfqUseCase,
-    private readonly getRfqListUseCase: GetRfqListUseCase,
-    private readonly getRfqByIdUseCase: GetRfqByIdUseCase
-  ) {}
+  constructor(private readonly rfqUseCases: RFQUseCases) {}
 
   public getAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const rfqs = await this.getRfqListUseCase.execute();
+      const rfqs = await this.rfqUseCases.getRfqList();
       res.status(200).json({
         success: true,
         data: rfqs.map((rfq) => ({
@@ -46,7 +38,7 @@ export class RFQController {
 
   public getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const rfq = await this.getRfqByIdUseCase.execute(req.params.id);
+      const rfq = await this.rfqUseCases.getRfqById(req.params.id);
       res.status(200).json({
         success: true,
         data: {
@@ -87,7 +79,7 @@ export class RFQController {
   public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const dto: CreateRfqDTO = req.body;
-      const rfq = await this.createRfqUseCase.execute(dto);
+      const rfq = await this.rfqUseCases.createRfq(dto);
       res.status(201).json({
         success: true,
         data: {

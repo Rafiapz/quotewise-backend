@@ -5,19 +5,25 @@ import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
 import { NotFoundError, DomainError } from '../../../../shared/errors/AppError';
 
 /**
- * Use Case: Submit a quotation for an existing RFQ
- * Enforces business rules:
- * 1. Target RFQ must exist.
- * 2. Target RFQ must not be expired.
- * 3. Quotation validUntil date must be in the future.
+ * QuotationUseCases (Application Service)
+ * Encapsulates all Quotation business use cases within a single cohesive class.
+ * Adheres strictly to Clean Architecture by orchestrating domain entities
+ * and repository interfaces with zero dependency on frameworks or databases.
  */
-export class CreateQuotationUseCase {
+export class QuotationUseCases {
   constructor(
     private readonly quotationRepository: IQuotationRepository,
     private readonly rfqRepository: IRFQRepository
   ) {}
 
-  public async execute(dto: CreateQuotationDTO): Promise<SupplierQuoteEntity> {
+  /**
+   * Use Case: Submit a quotation for an existing RFQ
+   * Business rules:
+   * 1. Target RFQ must exist.
+   * 2. Target RFQ must not be expired.
+   * 3. Quotation validUntil date must be in the future.
+   */
+  public async createQuotation(dto: CreateQuotationDTO): Promise<SupplierQuoteEntity> {
     const rfq = await this.rfqRepository.findById(dto.rfqId);
     if (!rfq) {
       throw new NotFoundError(`Cannot add quotation: RFQ with ID ${dto.rfqId} not found.`);
@@ -41,23 +47,23 @@ export class CreateQuotationUseCase {
       validUntil: validUntilDate,
     });
   }
-}
 
-/**
- * Use Case: Retrieve all supplier quotations submitted for a specific RFQ
- */
-export class GetQuotationsByRfqUseCase {
-  constructor(
-    private readonly quotationRepository: IQuotationRepository,
-    private readonly rfqRepository: IRFQRepository
-  ) {}
-
-  public async execute(rfqId: string): Promise<SupplierQuoteEntity[]> {
+  /**
+   * Use Case: Retrieve all supplier quotations submitted for a specific RFQ
+   */
+  public async getQuotationsByRfq(rfqId: string): Promise<SupplierQuoteEntity[]> {
     const rfq = await this.rfqRepository.findById(rfqId);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${rfqId} not found`);
     }
 
     return this.quotationRepository.findByRfqId(rfqId);
+  }
+
+  /**
+   * Use Case: Retrieve all supplier quotations across all RFQs
+   */
+  public async getAllQuotations(): Promise<SupplierQuoteEntity[]> {
+    return this.quotationRepository.findAll();
   }
 }
