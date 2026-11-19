@@ -47,7 +47,7 @@ export class PrismaRFQRepository implements IRFQRepository {
         quantity: data.quantity,
         neededBy: data.neededBy,
         userId: data.userId,
-      },
+      } as any,
       include: { quotes: true },
     });
 

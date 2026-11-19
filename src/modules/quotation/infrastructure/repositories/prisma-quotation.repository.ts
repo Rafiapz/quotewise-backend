@@ -42,7 +42,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         unitPrice: data.unitPrice,
         leadTime: data.leadTime,
         validUntil: data.validUntil,
-      },
+      } as any,
     });
 
     return this.mapToEntity(record);
