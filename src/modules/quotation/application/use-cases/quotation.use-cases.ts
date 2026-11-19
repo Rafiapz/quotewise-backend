@@ -4,6 +4,13 @@ import { CreateQuotationDTO } from '../dto/quotation.dto';
 import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
 import { NotFoundError, DomainError } from '../../../../shared/errors/AppError';
 
+/**
+ * Use Case: Submit a quotation for an existing RFQ
+ * Enforces business rules:
+ * 1. Target RFQ must exist.
+ * 2. Target RFQ must not be expired.
+ * 3. Quotation validUntil date must be in the future.
+ */
 export class CreateQuotationUseCase {
   constructor(
     private readonly quotationRepository: IQuotationRepository,
@@ -33,5 +40,24 @@ export class CreateQuotationUseCase {
       leadTime: dto.leadTime,
       validUntil: validUntilDate,
     });
+  }
+}
+
+/**
+ * Use Case: Retrieve all supplier quotations submitted for a specific RFQ
+ */
+export class GetQuotationsByRfqUseCase {
+  constructor(
+    private readonly quotationRepository: IQuotationRepository,
+    private readonly rfqRepository: IRFQRepository
+  ) {}
+
+  public async execute(rfqId: string): Promise<SupplierQuoteEntity[]> {
+    const rfq = await this.rfqRepository.findById(rfqId);
+    if (!rfq) {
+      throw new NotFoundError(`RFQ with ID ${rfqId} not found`);
+    }
+
+    return this.quotationRepository.findByRfqId(rfqId);
   }
 }

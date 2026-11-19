@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { CreateRfqUseCase } from '../../application/use-cases/create-rfq.use-case';
-import { GetRfqListUseCase } from '../../application/use-cases/get-rfq-list.use-case';
-import { GetRfqByIdUseCase } from '../../application/use-cases/get-rfq-by-id.use-case';
+import {
+  CreateRfqUseCase,
+  GetRfqListUseCase,
+  GetRfqByIdUseCase,
+} from '../../application/use-cases/rfq.use-cases';
 import { CreateRfqDTO } from '../../application/dto/rfq.dto';
 
 export class RFQController {

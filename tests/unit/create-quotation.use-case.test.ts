@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { CreateQuotationUseCase } from '../../src/modules/quotation/application/use-cases/create-quotation.use-case';
+import { CreateQuotationUseCase } from '../../src/modules/quotation/application/use-cases/quotation.use-cases';
 import { IQuotationRepository } from '../../src/modules/quotation/domain/repositories/quotation.repository.interface';
 import { IRFQRepository } from '../../src/modules/rfq/domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../src/modules/rfq/domain/entities/rfq.entity';

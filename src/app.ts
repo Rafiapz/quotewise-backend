@@ -9,16 +9,20 @@ import { notFoundHandler } from './shared/middleware/notFoundHandler';
 
 // RFQ Module
 import { PrismaRFQRepository } from './modules/rfq/infrastructure/repositories/prisma-rfq.repository';
-import { CreateRfqUseCase } from './modules/rfq/application/use-cases/create-rfq.use-case';
-import { GetRfqListUseCase } from './modules/rfq/application/use-cases/get-rfq-list.use-case';
-import { GetRfqByIdUseCase } from './modules/rfq/application/use-cases/get-rfq-by-id.use-case';
+import {
+  CreateRfqUseCase,
+  GetRfqListUseCase,
+  GetRfqByIdUseCase,
+} from './modules/rfq/application/use-cases/rfq.use-cases';
 import { RFQController } from './modules/rfq/presentation/controllers/rfq.controller';
 import { createRfqRouter } from './modules/rfq/presentation/routes/rfq.routes';
 
 // Quotation Module
 import { PrismaQuotationRepository } from './modules/quotation/infrastructure/repositories/prisma-quotation.repository';
-import { CreateQuotationUseCase } from './modules/quotation/application/use-cases/create-quotation.use-case';
-import { GetQuotationsByRfqUseCase } from './modules/quotation/application/use-cases/get-quotations-by-rfq.use-case';
+import {
+  CreateQuotationUseCase,
+  GetQuotationsByRfqUseCase,
+} from './modules/quotation/application/use-cases/quotation.use-cases';
 import { QuotationController } from './modules/quotation/presentation/controllers/quotation.controller';
 import { createQuotationRouter } from './modules/quotation/presentation/routes/quotation.routes';
 

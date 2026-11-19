@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import { CreateQuotationUseCase } from '../../application/use-cases/create-quotation.use-case';
-import { GetQuotationsByRfqUseCase } from '../../application/use-cases/get-quotations-by-rfq.use-case';
+import {
+  CreateQuotationUseCase,
+  GetQuotationsByRfqUseCase,
+} from '../../application/use-cases/quotation.use-cases';
 import { IQuotationRepository } from '../../domain/repositories/quotation.repository.interface';
 import { CreateQuotationDTO } from '../../application/dto/quotation.dto';
 

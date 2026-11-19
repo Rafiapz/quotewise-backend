@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { CreateRfqUseCase } from '../../src/modules/rfq/application/use-cases/create-rfq.use-case';
+import { CreateRfqUseCase } from '../../src/modules/rfq/application/use-cases/rfq.use-cases';
 import { IRFQRepository } from '../../src/modules/rfq/domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../src/modules/rfq/domain/entities/rfq.entity';
 import { DomainError } from '../../src/shared/errors/AppError';
