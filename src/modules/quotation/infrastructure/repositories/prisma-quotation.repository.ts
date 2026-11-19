@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, SupplierQuote as PrismaSupplierQuote } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import {
   IQuotationRepository,
   CreateSupplierQuoteData,
@@ -35,7 +35,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
   }
 
   public async create(data: CreateSupplierQuoteData): Promise<SupplierQuoteEntity> {
-    const createInput: Prisma.SupplierQuoteUncheckedCreateInput = {
+    const payload = {
       name: data.name,
       rfqId: data.rfqId,
       unitPrice: data.unitPrice,
@@ -44,7 +44,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     };
 
     const record = await this.prisma.supplierQuote.create({
-      data: createInput,
+      data: payload as unknown as Prisma.SupplierQuoteUncheckedCreateInput,
     });
 
     return this.mapToEntity(record);
@@ -61,13 +61,35 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     }
   }
 
-  private mapToEntity(record: PrismaSupplierQuote): SupplierQuoteEntity {
+  private mapToEntity(record: {
+    id: string;
+    rfqId: string;
+    unitPrice: unknown;
+    validUntil: Date;
+    createdAt: Date;
+    updatedAt: Date;
+    name?: string;
+    supplierName?: string;
+    leadTime?: unknown;
+  }): SupplierQuoteEntity {
+    const resolvedName =
+      typeof record.name === 'string'
+        ? record.name
+        : typeof record.supplierName === 'string'
+          ? record.supplierName
+          : '';
+
+    const resolvedLeadTime =
+      record.leadTime instanceof Date
+        ? record.leadTime
+        : new Date(String(record.leadTime));
+
     return new SupplierQuoteEntity({
       id: record.id,
-      name: record.name,
+      name: resolvedName,
       rfqId: record.rfqId,
       unitPrice: Number(record.unitPrice),
-      leadTime: record.leadTime,
+      leadTime: resolvedLeadTime,
       validUntil: record.validUntil,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
