@@ -14,14 +14,23 @@ export class RFQController {
 
   public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      const page = req.query.page ? Number(req.query.page) : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const search = (req.query.search as string) || undefined;
+      const status = (req.query.status as 'ALL' | 'OPEN' | 'QUOTED' | 'EXPIRED') || undefined;
       const userId = (req.query.userId as string) || undefined;
-      const rfqs = userId
-        ? await this.rfqUseCases.getRfqListByUserId(userId)
-        : await this.rfqUseCases.getRfqList();
+
+      const result = await this.rfqUseCases.getRfqList({
+        page,
+        limit,
+        search,
+        status,
+        userId,
+      });
 
       res.status(200).json({
         success: true,
-        data: rfqs.map((rfq) => ({
+        data: result.items.map((rfq) => ({
           id: rfq.id,
           partNumber: rfq.partNumber,
           description: rfq.description,
@@ -43,6 +52,8 @@ export class RFQController {
               }
             : null,
         })),
+        meta: result.meta,
+        stats: result.stats,
       });
     } catch (error) {
       next(error);

@@ -1,4 +1,8 @@
-import { IQuotationRepository } from '../../domain/repositories/quotation.repository.interface';
+import {
+  IQuotationRepository,
+  QuotationFilterOptions,
+  PaginatedQuotationResult,
+} from '../../domain/repositories/quotation.repository.interface';
 import { CreateQuotationDTO } from '../dto/quotation.dto';
 import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
 
@@ -28,8 +32,11 @@ export class QuotationUseCases {
     });
   }
 
-  public async getQuotationsByRfq(rfqId: string): Promise<SupplierQuoteEntity[]> {
-    return this.quotationRepository.findByRfqId(rfqId);
+  public async getQuotationsByRfq(
+    rfqId: string,
+    options?: QuotationFilterOptions
+  ): Promise<PaginatedQuotationResult> {
+    return this.quotationRepository.findByRfqId(rfqId, options);
   }
 
   public async getAllQuotations(): Promise<SupplierQuoteEntity[]> {

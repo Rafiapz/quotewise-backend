@@ -3,6 +3,8 @@ import {
   IRFQRepository,
   CreateRFQData,
   UpdateRFQData,
+  RfqFilterOptions,
+  PaginatedRfqResult,
 } from '../../domain/repositories/rfq.repository.interface';
 import { RFQEntity } from '../../domain/entities/rfq.entity';
 import { SupplierQuoteEntity } from '../../../quotation/domain/entities/quotation.entity';
@@ -24,32 +26,108 @@ export class PrismaRFQRepository implements IRFQRepository {
     return this.mapToEntity(record);
   }
 
-  public async findAll(): Promise<RFQEntity[]> {
-    const records = await this.prisma.rFQ.findMany({
-      where: { isActive: true },
-      include: {
-        quotes: {
-          where: { isActive: true },
+  public async findAll(options: RfqFilterOptions = {}): Promise<PaginatedRfqResult> {
+    const page = Math.max(1, Number(options.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(options.limit) || 9));
+    const now = new Date();
+
+    const where: Prisma.RFQWhereInput = {
+      isActive: true,
+    };
+
+    if (options.userId) {
+      where.userId = options.userId;
+    }
+
+    if (options.search && options.search.trim()) {
+      const searchTerm = options.search.trim();
+      where.OR = [
+        { partNumber: { contains: searchTerm, mode: 'insensitive' } },
+        { description: { contains: searchTerm, mode: 'insensitive' } },
+      ];
+    }
+
+    if (options.status && options.status !== 'ALL') {
+      if (options.status === 'EXPIRED') {
+        where.neededBy = { lt: now };
+      } else if (options.status === 'QUOTED') {
+        where.neededBy = { gte: now };
+        where.quotes = { some: { isActive: true } };
+      } else if (options.status === 'OPEN') {
+        where.neededBy = { gte: now };
+        where.quotes = { none: { isActive: true } };
+      }
+    }
+
+    const userScope = options.userId ? { userId: options.userId } : {};
+
+    const [
+      filteredTotal,
+      records,
+      totalCount,
+      openCount,
+      quotedCount,
+      expiredCount,
+    ] = await this.prisma.$transaction([
+      this.prisma.rFQ.count({ where }),
+      this.prisma.rFQ.findMany({
+        where,
+        include: {
+          quotes: {
+            where: { isActive: true },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    return records.map((record) => this.mapToEntity(record));
-  }
-
-  public async findByUserId(userId: string): Promise<RFQEntity[]> {
-    const records = await this.prisma.rFQ.findMany({
-      where: { userId, isActive: true },
-      include: {
-        quotes: {
-          where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.rFQ.count({
+        where: { isActive: true, ...userScope },
+      }),
+      this.prisma.rFQ.count({
+        where: {
+          isActive: true,
+          neededBy: { gte: now },
+          quotes: { none: { isActive: true } },
+          ...userScope,
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+      }),
+      this.prisma.rFQ.count({
+        where: {
+          isActive: true,
+          neededBy: { gte: now },
+          quotes: { some: { isActive: true } },
+          ...userScope,
+        },
+      }),
+      this.prisma.rFQ.count({
+        where: {
+          isActive: true,
+          neededBy: { lt: now },
+          ...userScope,
+        },
+      }),
+    ]);
 
-    return records.map((record) => this.mapToEntity(record));
+    const totalPages = Math.ceil(filteredTotal / limit) || 1;
+
+    return {
+      items: records.map((record) => this.mapToEntity(record)),
+      meta: {
+        page,
+        limit,
+        total: filteredTotal,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      stats: {
+        total: totalCount,
+        open: openCount,
+        quoted: quotedCount,
+        expired: expiredCount,
+      },
+    };
   }
 
   public async create(data: CreateRFQData): Promise<RFQEntity> {

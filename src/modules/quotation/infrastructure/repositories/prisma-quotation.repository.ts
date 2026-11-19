@@ -2,6 +2,8 @@ import { Prisma, PrismaClient } from '@prisma/client';
 import {
   IQuotationRepository,
   CreateSupplierQuoteData,
+  QuotationFilterOptions,
+  PaginatedQuotationResult,
 } from '../../domain/repositories/quotation.repository.interface';
 import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
 
@@ -17,13 +19,59 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     return this.mapToEntity(record);
   }
 
-  public async findByRfqId(rfqId: string): Promise<SupplierQuoteEntity[]> {
-    const records = await this.prisma.supplierQuote.findMany({
-      where: { rfqId, isActive: true },
-      orderBy: { unitPrice: 'asc' },
-    });
+  public async findByRfqId(
+    rfqId: string,
+    options: QuotationFilterOptions = {}
+  ): Promise<PaginatedQuotationResult> {
+    const page = Math.max(1, Number(options.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(options.limit) || 6));
 
-    return records.map((record) => this.mapToEntity(record));
+    const where: Prisma.SupplierQuoteWhereInput = {
+      rfqId,
+      isActive: true,
+    };
+
+    if (options.search && options.search.trim()) {
+      where.name = { contains: options.search.trim(), mode: 'insensitive' };
+    }
+
+    let orderBy: Prisma.SupplierQuoteOrderByWithRelationInput = { unitPrice: 'asc' };
+    if (options.sortBy === 'price_desc') {
+      orderBy = { unitPrice: 'desc' };
+    } else if (options.sortBy === 'lead_asc') {
+      orderBy = { leadTime: 'asc' };
+    } else if (options.sortBy === 'recent') {
+      orderBy = { createdAt: 'desc' };
+    }
+
+    const [filteredTotal, minPriceAgg, records] = await this.prisma.$transaction([
+      this.prisma.supplierQuote.count({ where }),
+      this.prisma.supplierQuote.aggregate({
+        where: { rfqId, isActive: true },
+        _min: { unitPrice: true },
+      }),
+      this.prisma.supplierQuote.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(filteredTotal / limit) || 1;
+
+    return {
+      items: records.map((record) => this.mapToEntity(record)),
+      meta: {
+        page,
+        limit,
+        total: filteredTotal,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      lowestUnitPrice: minPriceAgg._min.unitPrice ? Number(minPriceAgg._min.unitPrice) : undefined,
+    };
   }
 
   public async findAll(): Promise<SupplierQuoteEntity[]> {

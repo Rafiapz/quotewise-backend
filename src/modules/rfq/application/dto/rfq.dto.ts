@@ -19,9 +19,18 @@ export const rfqIdParamSchema = z.object({
   id: z.string().uuid('Invalid RFQ ID format'),
 });
 
+export const rfqQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(9),
+  search: z.string().optional(),
+  status: z.enum(['ALL', 'OPEN', 'QUOTED', 'EXPIRED']).optional().default('ALL'),
+  userId: z.string().uuid().optional(),
+});
+
 export type CreateRfqDTO = z.infer<typeof createRfqSchema> & { userId: string };
 export type UpdateRfqDTO = z.infer<typeof updateRfqSchema>;
 export type RfqIdParamDTO = z.infer<typeof rfqIdParamSchema>;
+export type RfqQueryDTO = z.infer<typeof rfqQuerySchema>;
 
 export interface RfqResponseDTO {
   id: string;

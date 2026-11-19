@@ -1,4 +1,8 @@
-import { IRFQRepository } from '../../domain/repositories/rfq.repository.interface';
+import {
+  IRFQRepository,
+  RfqFilterOptions,
+  PaginatedRfqResult,
+} from '../../domain/repositories/rfq.repository.interface';
 import { IQuotationRepository } from '../../../quotation/domain/repositories/quotation.repository.interface';
 import { CreateRfqDTO } from '../dto/rfq.dto';
 import { RFQEntity } from '../../domain/entities/rfq.entity';
@@ -20,12 +24,8 @@ export class RFQUseCases {
     });
   }
 
-  public async getRfqList(): Promise<RFQEntity[]> {
-    return this.rfqRepository.findAll();
-  }
-
-  public async getRfqListByUserId(userId: string): Promise<RFQEntity[]> {
-    return this.rfqRepository.findByUserId(userId);
+  public async getRfqList(options?: RfqFilterOptions): Promise<PaginatedRfqResult> {
+    return this.rfqRepository.findAll(options);
   }
 
   public async getRfqById(id: string): Promise<RFQEntity> {

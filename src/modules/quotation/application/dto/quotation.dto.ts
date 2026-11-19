@@ -24,8 +24,16 @@ export const rfqIdParamForQuotationSchema = z.object({
   rfqId: z.string().uuid('Invalid RFQ ID format'),
 });
 
+export const quotationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(6),
+  search: z.string().optional(),
+  sortBy: z.enum(['price_asc', 'price_desc', 'lead_asc', 'recent']).optional().default('price_asc'),
+});
+
 export type CreateQuotationDTO = z.infer<typeof createQuotationSchema>;
 export type QuotationIdParamDTO = z.infer<typeof quotationIdParamSchema>;
+export type QuotationQueryDTO = z.infer<typeof quotationQuerySchema>;
 
 export interface SupplierQuoteResponseDTO {
   id: string;
