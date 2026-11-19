@@ -1,5 +1,6 @@
 import { createApp } from './app';
 import { config } from './config/env';
+import { prisma } from './config/database';
 import { logger } from './shared/utils/logger';
 
 const app = createApp();
@@ -10,18 +11,19 @@ const server = app.listen(config.PORT, () => {
   logger.info(`Allowed CORS origin: ${config.FRONTEND_URL}`);
 });
 
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`${signal} signal received: closing HTTP server and disconnecting Prisma`);
+  server.close(async () => {
     logger.info('HTTP server closed');
+    try {
+      await prisma.$disconnect();
+      logger.info('Prisma disconnected successfully');
+    } catch (err) {
+      logger.error('Error during Prisma disconnect:', err);
+    }
     process.exit(0);
   });
-});
+};
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT signal received: closing HTTP server');
-  server.close(() => {
-    logger.info('HTTP server closed');
-    process.exit(0);
-  });
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));

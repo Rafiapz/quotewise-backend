@@ -20,4 +20,5 @@ export interface IRFQRepository {
   create(data: CreateRFQData): Promise<RFQEntity>;
   update(id: string, data: UpdateRFQData): Promise<RFQEntity | null>;
   delete(id: string): Promise<boolean>;
+  exists(id: string): Promise<boolean>;
 }

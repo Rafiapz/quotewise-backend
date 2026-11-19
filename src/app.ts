@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { config } from './config/env';
 import { prisma } from './config/database';
 import { errorHandler } from './shared/middleware/errorHandler';
+import { notFoundHandler } from './shared/middleware/notFoundHandler';
 
 // RFQ Module
 import { PrismaRFQRepository } from './modules/rfq/infrastructure/repositories/prisma-rfq.repository';
@@ -42,12 +43,20 @@ export const createApp = (): Application => {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // Health check endpoint
-  app.get('/api/health', (_req: Request, res: Response) => {
+  // Health check endpoint with database check
+  app.get('/api/health', async (_req: Request, res: Response) => {
+    let dbStatus = 'healthy';
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      dbStatus = 'disconnected';
+    }
+
     res.status(200).json({
       status: 'ok',
       service: 'quotewise-backend',
       environment: config.NODE_ENV,
+      database: dbStatus,
       timestamp: new Date().toISOString(),
     });
   });
@@ -78,8 +87,11 @@ export const createApp = (): Application => {
   );
 
   // Register Presentation Routes
-  app.use('/api/rfqs', createRfqRouter(rfqController));
+  app.use('/api/rfqs', createRfqRouter(rfqController, quotationController));
   app.use('/api/quotations', createQuotationRouter(quotationController));
+
+  // 404 Route Handler
+  app.use(notFoundHandler);
 
   // Centralized Error Handling
   app.use(errorHandler);

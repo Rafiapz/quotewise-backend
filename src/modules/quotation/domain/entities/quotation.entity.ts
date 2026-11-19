@@ -20,9 +20,16 @@ export class SupplierQuoteEntity {
   public readonly updatedAt: Date;
 
   constructor(props: SupplierQuoteProps) {
+    if (props.unitPrice <= 0) {
+      throw new Error('Unit price must be a positive number.');
+    }
+    if (props.leadTime <= 0) {
+      throw new Error('Lead time must be at least 1 day.');
+    }
+
     this.id = props.id;
     this.rfqId = props.rfqId;
-    this.supplierName = props.supplierName;
+    this.supplierName = props.supplierName.trim();
     this.unitPrice = props.unitPrice;
     this.leadTime = props.leadTime;
     this.validUntil = props.validUntil;
@@ -30,7 +37,18 @@ export class SupplierQuoteEntity {
     this.updatedAt = props.updatedAt;
   }
 
+  /**
+   * Checks whether the quotation validity period has elapsed.
+   */
   public isExpired(referenceDate: Date = new Date()): boolean {
     return this.validUntil.getTime() < referenceDate.getTime();
+  }
+
+  /**
+   * Total calculated cost for a given RFQ quantity.
+   */
+  public calculateTotalCost(quantity: number): number {
+    if (quantity <= 0) return 0;
+    return Number((this.unitPrice * quantity).toFixed(2));
   }
 }

@@ -11,9 +11,14 @@ export class QuotationController {
     private readonly quotationRepository: IQuotationRepository
   ) {}
 
-  public getAll = async (_req: Request, res: Response, next: NextFunction): Promise<void> => {
+  public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const quotes = await this.quotationRepository.findAll();
+      const rfqId = req.query.rfqId as string | undefined;
+
+      const quotes = rfqId
+        ? await this.getQuotationsByRfqUseCase.execute(rfqId)
+        : await this.quotationRepository.findAll();
+
       res.status(200).json({
         success: true,
         data: quotes.map((q) => ({
@@ -34,7 +39,9 @@ export class QuotationController {
 
   public getByRfq = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const quotes = await this.getQuotationsByRfqUseCase.execute(req.params.rfqId);
+      const rfqId = req.params.rfqId || req.params.id;
+      const quotes = await this.getQuotationsByRfqUseCase.execute(rfqId);
+
       res.status(200).json({
         success: true,
         data: quotes.map((q) => ({
@@ -57,6 +64,7 @@ export class QuotationController {
     try {
       const dto: CreateQuotationDTO = req.body;
       const quote = await this.createQuotationUseCase.execute(dto);
+
       res.status(201).json({
         success: true,
         data: {
