@@ -16,17 +16,20 @@ export const createRedisClient = (): Redis | null => {
 
   try {
     const options: RedisOptions = {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 1,
+      connectTimeout: 5000,
+      commandTimeout: 2000,
+      enableOfflineQueue: false,
       lazyConnect: false,
       enableReadyCheck: true,
       retryStrategy: (times: number) => {
-        if (times > 5) {
+        if (times > 3) {
           logger.warn(
             `[CACHE] Redis connection retry limit reached (${times} attempts). Stopping reconnect.`,
           );
           return null; // Stop retrying
         }
-        const delay = Math.min(times * 200, 2000);
+        const delay = Math.min(times * 300, 2000);
         return delay;
       },
     };

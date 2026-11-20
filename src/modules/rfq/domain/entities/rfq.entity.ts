@@ -42,32 +42,56 @@ export class RFQEntity {
 
   /**
    * Calculates RFQ status dynamically:
-   * - EXPIRED if deadline has passed
-   * - QUOTED if quotations have been received
-   * - OPEN if pending quotations
+   * - Open — no quotes yet.
+   * - Quoted — at least one quote that is still valid.
+   * - Expired — the "needed by" date has passed, or every quote is past its "valid until" date.
    */
-  get status(): RfqStatus {
-    const now = new Date();
-    if (this.neededBy.getTime() < now.getTime()) {
+  getStatusAsOf(asOf: Date = new Date()): RfqStatus {
+    if (this.neededBy.getTime() < asOf.getTime()) {
       return "EXPIRED";
     }
-    if (this.quotes.length > 0) {
-      return "QUOTED";
+    if (this.quotes.length === 0) {
+      return "OPEN";
     }
-    return "OPEN";
+    const hasValidQuote = this.quotes.some(
+      (q) => new Date(q.validUntil).getTime() >= asOf.getTime(),
+    );
+    return hasValidQuote ? "QUOTED" : "EXPIRED";
+  }
+
+  get status(): RfqStatus {
+    return this.getStatusAsOf(new Date());
   }
 
   /**
-   * Calculates best quotation dynamically (lowest unit price).
+   * Finds the BEST quote:
+   * The cheapest quote that is still valid AND can arrive in time for "needed by".
+   * If unit prices are tied, the quote with the earlier delivery is selected.
    */
-  get bestQuote(): SupplierQuoteEntity | null {
-    if (this.quotes.length === 0) {
-      return null;
-    }
+  getBestQuoteAsOf(asOf: Date = new Date()): SupplierQuoteEntity | null {
+    // 1. Filter: quotes that are valid and arrive on time
+    const eligibleQuotes = this.quotes.filter(
+      (q) =>
+        new Date(q.validUntil).getTime() >= asOf.getTime() &&
+        new Date(q.leadTime).getTime() <= this.neededBy.getTime(),
+    );
 
-    return this.quotes.reduce<SupplierQuoteEntity>((best, current) => {
-      return current.unitPrice < best.unitPrice ? current : best;
-    }, this.quotes[0]);
+    if (eligibleQuotes.length === 0) return null;
+
+    // 2. Sort: lowest price first; on price tie, earliest delivery first
+    eligibleQuotes.sort((a, b) => {
+      if (a.unitPrice !== b.unitPrice) {
+        return a.unitPrice - b.unitPrice;
+      }
+      return new Date(a.leadTime).getTime() - new Date(b.leadTime).getTime();
+    });
+
+    // 3. The best quote is the first one
+    return eligibleQuotes[0];
+  }
+
+  get bestQuote(): SupplierQuoteEntity | null {
+    return this.getBestQuoteAsOf(new Date());
   }
 
   get quoteCount(): number {
@@ -84,11 +108,14 @@ export class RFQEntity {
       partNumber: raw.partNumber,
       description: raw.description,
       quantity: raw.quantity,
-      neededBy: raw.neededBy instanceof Date ? raw.neededBy : new Date(raw.neededBy),
+      neededBy:
+        raw.neededBy instanceof Date ? raw.neededBy : new Date(raw.neededBy),
       userId: raw.userId,
       isActive: raw.isActive !== undefined ? raw.isActive : true,
-      createdAt: raw.createdAt instanceof Date ? raw.createdAt : new Date(raw.createdAt),
-      updatedAt: raw.updatedAt instanceof Date ? raw.updatedAt : new Date(raw.updatedAt),
+      createdAt:
+        raw.createdAt instanceof Date ? raw.createdAt : new Date(raw.createdAt),
+      updatedAt:
+        raw.updatedAt instanceof Date ? raw.updatedAt : new Date(raw.updatedAt),
       quotes,
     });
   }

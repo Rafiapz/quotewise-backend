@@ -10,6 +10,10 @@ const server = app.listen(config.PORT, () => {
   logger.info(`QuoteWise Backend server running on http://localhost:${config.PORT}`);
 });
 
+// Configure keep-alive timeouts to prevent connection drops behind reverse proxies (Render, AWS, Nginx)
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
 const gracefulShutdown = async () => {
   server.close(async () => {
     try {

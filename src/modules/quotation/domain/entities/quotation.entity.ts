@@ -33,17 +33,30 @@ export class SupplierQuoteEntity {
     this.updatedAt = props.updatedAt;
   }
 
+
   static fromJSON(raw: any): SupplierQuoteEntity {
     return new SupplierQuoteEntity({
       id: raw.id,
-      name: raw.name || raw.supplierName || '',
+      name: raw.name || raw.supplierName || "",
       rfqId: raw.rfqId,
       unitPrice: Number(raw.unitPrice),
-      leadTime: raw.leadTime instanceof Date ? raw.leadTime : new Date(String(raw.leadTime)),
-      validUntil: raw.validUntil instanceof Date ? raw.validUntil : new Date(String(raw.validUntil)),
+      leadTime:
+        raw.leadTime instanceof Date
+          ? raw.leadTime
+          : new Date(String(raw.leadTime)),
+      validUntil:
+        raw.validUntil instanceof Date
+          ? raw.validUntil
+          : new Date(String(raw.validUntil)),
       isActive: raw.isActive !== undefined ? raw.isActive : true,
-      createdAt: raw.createdAt instanceof Date ? raw.createdAt : new Date(String(raw.createdAt)),
-      updatedAt: raw.updatedAt instanceof Date ? raw.updatedAt : new Date(String(raw.updatedAt)),
+      createdAt:
+        raw.createdAt instanceof Date
+          ? raw.createdAt
+          : new Date(String(raw.createdAt)),
+      updatedAt:
+        raw.updatedAt instanceof Date
+          ? raw.updatedAt
+          : new Date(String(raw.updatedAt)),
     });
   }
 }

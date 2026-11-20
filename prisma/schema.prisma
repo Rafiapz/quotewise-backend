@@ -32,6 +32,7 @@ model RFQ {
   user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   quotes      SupplierQuote[]
 
+  @@index([userId, isActive, createdAt(sort: Desc)])
   @@map("rfqs")
 }
 
@@ -47,5 +48,7 @@ model SupplierQuote {
   updatedAt  DateTime @updatedAt @map("updated_at")
   rfq        RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
 
+  @@index([rfqId, isActive])
+  @@index([rfqId, unitPrice(sort: Asc)])
   @@map("supplier_quotes")
 }
