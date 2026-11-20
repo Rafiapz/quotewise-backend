@@ -18,6 +18,10 @@ export const createApp = (
   container: AwilixContainer<AppCradle> = createAppContainer(),
 ): Application => {
   const app = express();
+
+  // Trust first proxy (e.g. Render, Railway, Vercel, AWS ALB, Nginx)
+  app.set("trust proxy", 1);
+
   const {
     AuthController,
     RFQController,
@@ -27,9 +31,19 @@ export const createApp = (
 
   // Security and base middlewares
   app.use(helmet());
+
+  const allowedOrigins = Array.from(
+    new Set([
+      config.FRONTEND_URL,
+      config.FRONTEND_URL.replace(/\/$/, ""),
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ]),
+  );
+
   app.use(
     cors({
-      origin: [config.FRONTEND_URL, "http://localhost:5173"],
+      origin: allowedOrigins,
       credentials: true,
     }),
   );

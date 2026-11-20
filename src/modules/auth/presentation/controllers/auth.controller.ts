@@ -15,7 +15,6 @@ export interface AuthControllerConstructorParams {
 export class AuthController {
   private authUseCases: AuthUseCases;
   private cookieName: string;
-  private cookieOptions: CookieOptions;
 
   constructor({
     AuthUseCases,
@@ -23,10 +22,18 @@ export class AuthController {
   }: AuthControllerConstructorParams) {
     this.authUseCases = AuthUseCases;
     this.cookieName = Config.COOKIE_NAME;
-    this.cookieOptions = {
+  }
+
+  private getCookieOptions(req: Request): CookieOptions {
+    const isHttps =
+      req.secure ||
+      req.headers["x-forwarded-proto"] === "https" ||
+      process.env.NODE_ENV === "production";
+
+    return {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: isHttps,
+      sameSite: isHttps ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     };
@@ -41,7 +48,7 @@ export class AuthController {
       const dto = req.body as RegisterInputDTO;
       const result = await this.authUseCases.register(dto);
 
-      res.cookie(this.cookieName, result.token, this.cookieOptions);
+      res.cookie(this.cookieName, result.token, this.getCookieOptions(req));
 
       res.status(201).json({
         success: true,
@@ -65,7 +72,7 @@ export class AuthController {
       const dto = req.body as LoginInputDTO;
       const result = await this.authUseCases.login(dto);
 
-      res.cookie(this.cookieName, result.token, this.cookieOptions);
+      res.cookie(this.cookieName, result.token, this.getCookieOptions(req));
 
       res.status(200).json({
         success: true,
@@ -80,12 +87,13 @@ export class AuthController {
     }
   };
 
-  logout = (_req: Request, res: Response): void => {
+  logout = (req: Request, res: Response): void => {
+    const cookieOptions = this.getCookieOptions(req);
     res.clearCookie(this.cookieName, {
-      httpOnly: this.cookieOptions.httpOnly,
-      secure: this.cookieOptions.secure,
-      sameSite: this.cookieOptions.sameSite,
-      path: this.cookieOptions.path,
+      httpOnly: cookieOptions.httpOnly,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      path: cookieOptions.path,
     });
 
     res.status(200).json({
