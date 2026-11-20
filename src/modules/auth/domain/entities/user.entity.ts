@@ -7,16 +7,30 @@ export interface SafeUser {
 }
 
 export class UserEntity {
-  constructor(
-    public readonly id: string,
-    public readonly companyName: string,
-    public readonly email: string,
-    public readonly password: string,
-    public readonly createdAt: Date,
-    public readonly isActive: boolean = true
-  ) {}
+  readonly id: string;
+  readonly companyName: string;
+  readonly email: string;
+  readonly password: string;
+  readonly createdAt: Date;
+  readonly isActive: boolean;
 
-  public toSafeObject(): SafeUser {
+  constructor(
+    id: string,
+    companyName: string,
+    email: string,
+    password: string,
+    createdAt: Date,
+    isActive: boolean = true
+  ) {
+    this.id = id;
+    this.companyName = companyName;
+    this.email = email;
+    this.password = password;
+    this.createdAt = createdAt;
+    this.isActive = isActive;
+  }
+
+  toSafeObject(): SafeUser {
     return {
       id: this.id,
       companyName: this.companyName,

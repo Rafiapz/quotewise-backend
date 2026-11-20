@@ -11,15 +11,15 @@ export interface SupplierQuoteProps {
 }
 
 export class SupplierQuoteEntity {
-  public readonly id: string;
-  public readonly name: string;
-  public readonly rfqId: string;
-  public readonly unitPrice: number;
-  public readonly leadTime: Date;
-  public readonly validUntil: Date;
-  public readonly isActive: boolean;
-  public readonly createdAt: Date;
-  public readonly updatedAt: Date;
+  readonly id: string;
+  readonly name: string;
+  readonly rfqId: string;
+  readonly unitPrice: number;
+  readonly leadTime: Date;
+  readonly validUntil: Date;
+  readonly isActive: boolean;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 
   constructor(props: SupplierQuoteProps) {
     this.id = props.id;
@@ -31,5 +31,19 @@ export class SupplierQuoteEntity {
     this.isActive = props.isActive !== undefined ? props.isActive : true;
     this.createdAt = props.createdAt;
     this.updatedAt = props.updatedAt;
+  }
+
+  static fromJSON(raw: any): SupplierQuoteEntity {
+    return new SupplierQuoteEntity({
+      id: raw.id,
+      name: raw.name || raw.supplierName || '',
+      rfqId: raw.rfqId,
+      unitPrice: Number(raw.unitPrice),
+      leadTime: raw.leadTime instanceof Date ? raw.leadTime : new Date(String(raw.leadTime)),
+      validUntil: raw.validUntil instanceof Date ? raw.validUntil : new Date(String(raw.validUntil)),
+      isActive: raw.isActive !== undefined ? raw.isActive : true,
+      createdAt: raw.createdAt instanceof Date ? raw.createdAt : new Date(String(raw.createdAt)),
+      updatedAt: raw.updatedAt instanceof Date ? raw.updatedAt : new Date(String(raw.updatedAt)),
+    });
   }
 }

@@ -1,33 +1,42 @@
-import { Request, Response, NextFunction, CookieOptions } from 'express';
-import { AuthUseCases } from '../../application/use-cases/auth.use-cases';
-import { RegisterInputDTO, LoginInputDTO } from '../../application/dto/auth.dto';
-import { UnauthorizedError } from '../../../../shared/errors/AppError';
+import { Request, Response, NextFunction, CookieOptions } from "express";
+import { AuthUseCases } from "../../application/use-cases/auth.use-cases";
+import {
+  RegisterInputDTO,
+  LoginInputDTO,
+} from "../../application/dto/auth.dto";
+import { config } from "../../../../config/env";
+import { UnauthorizedError } from "../../../../shared/errors/AppError";
 
-export interface CookieConfig {
-  name: string;
-  isProduction: boolean;
-  maxAgeMs: number;
+export interface AuthControllerConstructorParams {
+  AuthUseCases: AuthUseCases;
+  Config: typeof config;
 }
 
 export class AuthController {
-  private readonly cookieName: string;
-  private readonly cookieOptions: CookieOptions;
+  private authUseCases: AuthUseCases;
+  private cookieName: string;
+  private cookieOptions: CookieOptions;
 
-  constructor(
-    private readonly authUseCases: AuthUseCases,
-    cookieConfig: CookieConfig
-  ) {
-    this.cookieName = cookieConfig.name;
+  constructor({
+    AuthUseCases,
+    Config,
+  }: AuthControllerConstructorParams) {
+    this.authUseCases = AuthUseCases;
+    this.cookieName = Config.COOKIE_NAME;
     this.cookieOptions = {
       httpOnly: true,
-      secure: cookieConfig.isProduction,
-      sameSite: cookieConfig.isProduction ? 'none' : 'lax',
-      maxAge: cookieConfig.maxAgeMs,
-      path: '/',
+      secure: false,
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
     };
   }
 
-  public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  register = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = req.body as RegisterInputDTO;
       const result = await this.authUseCases.register(dto);
@@ -36,7 +45,7 @@ export class AuthController {
 
       res.status(201).json({
         success: true,
-        message: 'Registration successful',
+        message: "Registration successful",
         data: {
           user: result.user,
           token: result.token,
@@ -47,7 +56,11 @@ export class AuthController {
     }
   };
 
-  public login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  login = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const dto = req.body as LoginInputDTO;
       const result = await this.authUseCases.login(dto);
@@ -56,7 +69,7 @@ export class AuthController {
 
       res.status(200).json({
         success: true,
-        message: 'Login successful',
+        message: "Login successful",
         data: {
           user: result.user,
           token: result.token,
@@ -67,7 +80,7 @@ export class AuthController {
     }
   };
 
-  public logout = (_req: Request, res: Response): void => {
+  logout = (_req: Request, res: Response): void => {
     res.clearCookie(this.cookieName, {
       httpOnly: this.cookieOptions.httpOnly,
       secure: this.cookieOptions.secure,
@@ -77,14 +90,18 @@ export class AuthController {
 
     res.status(200).json({
       success: true,
-      message: 'Logged out successfully',
+      message: "Logged out successfully",
     });
   };
 
-  public me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  me = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       if (!req.user) {
-        throw new UnauthorizedError('Authentication required');
+        throw new UnauthorizedError("Authentication required");
       }
 
       const user = await this.authUseCases.getCurrentUser(req.user.userId);

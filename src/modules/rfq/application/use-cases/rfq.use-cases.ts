@@ -3,19 +3,30 @@ import {
   RfqFilterOptions,
   PaginatedRfqResult,
   UpdateRFQData,
-} from '../../domain/repositories/rfq.repository.interface';
-import { IQuotationRepository } from '../../../quotation/domain/repositories/quotation.repository.interface';
-import { CreateRfqDTO, UpdateRfqDTO } from '../dto/rfq.dto';
-import { RFQEntity } from '../../domain/entities/rfq.entity';
-import { NotFoundError } from '../../../../shared/errors/AppError';
+} from "../../domain/repositories/rfq.repository.interface";
+import { IQuotationRepository } from "../../../quotation/domain/repositories/quotation.repository.interface";
+import { CreateRfqDTO, UpdateRfqDTO } from "../dto/rfq.dto";
+import { RFQEntity } from "../../domain/entities/rfq.entity";
+import { NotFoundError } from "../../../../shared/errors/AppError";
+
+export interface RFQUseCasesConstructorParams {
+  RFQRepository: IRFQRepository;
+  QuotationRepository?: IQuotationRepository;
+}
 
 export class RFQUseCases {
-  constructor(
-    private readonly rfqRepository: IRFQRepository,
-    private readonly quotationRepository?: IQuotationRepository
-  ) {}
+  private rfqRepository: IRFQRepository;
+  private quotationRepository?: IQuotationRepository;
 
-  public async createRfq(dto: CreateRfqDTO): Promise<RFQEntity> {
+  constructor({
+    RFQRepository,
+    QuotationRepository,
+  }: RFQUseCasesConstructorParams) {
+    this.rfqRepository = RFQRepository;
+    this.quotationRepository = QuotationRepository;
+  }
+
+  async createRfq(dto: CreateRfqDTO): Promise<RFQEntity> {
     return this.rfqRepository.create({
       partNumber: dto.partNumber,
       description: dto.description,
@@ -25,7 +36,7 @@ export class RFQUseCases {
     });
   }
 
-  public async updateRfq(id: string, dto: UpdateRfqDTO): Promise<RFQEntity> {
+  async updateRfq(id: string, dto: UpdateRfqDTO): Promise<RFQEntity> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found`);
@@ -55,11 +66,11 @@ export class RFQUseCases {
     return updated;
   }
 
-  public async getRfqList(options?: RfqFilterOptions): Promise<PaginatedRfqResult> {
+  async getRfqList(options?: RfqFilterOptions): Promise<PaginatedRfqResult> {
     return this.rfqRepository.findAll(options);
   }
 
-  public async getRfqById(id: string): Promise<RFQEntity> {
+  async getRfqById(id: string): Promise<RFQEntity> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found`);
@@ -67,7 +78,7 @@ export class RFQUseCases {
     return rfq;
   }
 
-  public async deleteRfq(id: string): Promise<boolean> {
+  async deleteRfq(id: string): Promise<boolean> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found or already deleted`);

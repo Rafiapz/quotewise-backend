@@ -2,22 +2,37 @@ import {
   IQuotationRepository,
   QuotationFilterOptions,
   PaginatedQuotationResult,
-} from '../../domain/repositories/quotation.repository.interface';
-import { CreateQuotationDTO } from '../dto/quotation.dto';
-import { SupplierQuoteEntity } from '../../domain/entities/quotation.entity';
-import { NotFoundError } from '../../../../shared/errors/AppError';
+} from "../../domain/repositories/quotation.repository.interface";
+import { CreateQuotationDTO } from "../dto/quotation.dto";
+import { SupplierQuoteEntity } from "../../domain/entities/quotation.entity";
+import { NotFoundError } from "../../../../shared/errors/AppError";
+
+export interface QuotationUseCasesConstructorParams {
+  QuotationRepository: IQuotationRepository;
+}
 
 export class QuotationUseCases {
-  constructor(private readonly quotationRepository: IQuotationRepository) {}
+  private quotationRepository: IQuotationRepository;
 
-  public async createQuotation(dto: CreateQuotationDTO): Promise<SupplierQuoteEntity> {
+  constructor({
+    QuotationRepository,
+  }: QuotationUseCasesConstructorParams) {
+    this.quotationRepository = QuotationRepository;
+  }
+
+  async createQuotation(dto: CreateQuotationDTO): Promise<SupplierQuoteEntity> {
     let leadTimeDate: Date;
 
-    if (typeof dto.leadTime === 'number') {
+    if (typeof dto.leadTime === "number") {
       leadTimeDate = new Date(Date.now() + dto.leadTime * 86400000);
     } else {
       const parsedNumber = Number(dto.leadTime);
-      if (!isNaN(parsedNumber) && parsedNumber > 0 && !dto.leadTime.includes('-') && !dto.leadTime.includes('/')) {
+      if (
+        !isNaN(parsedNumber) &&
+        parsedNumber > 0 &&
+        !dto.leadTime.includes("-") &&
+        !dto.leadTime.includes("/")
+      ) {
         leadTimeDate = new Date(Date.now() + parsedNumber * 86400000);
       } else {
         leadTimeDate = new Date(dto.leadTime);
@@ -33,18 +48,18 @@ export class QuotationUseCases {
     });
   }
 
-  public async getQuotationsByRfq(
+  async getQuotationsByRfq(
     rfqId: string,
-    options?: QuotationFilterOptions
+    options?: QuotationFilterOptions,
   ): Promise<PaginatedQuotationResult> {
     return this.quotationRepository.findByRfqId(rfqId, options);
   }
 
-  public async getAllQuotations(): Promise<SupplierQuoteEntity[]> {
+  async getAllQuotations(): Promise<SupplierQuoteEntity[]> {
     return this.quotationRepository.findAll();
   }
 
-  public async deleteQuotation(id: string): Promise<boolean> {
+  async deleteQuotation(id: string): Promise<boolean> {
     const existing = await this.quotationRepository.findById(id);
     if (!existing) {
       throw new NotFoundError(`Quotation with ID ${id} not found`);

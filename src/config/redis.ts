@@ -9,7 +9,7 @@ export const createRedisClient = (): Redis | null => {
 
   if (!redisUrl) {
     logger.warn(
-      "REDIS_URL not configured. Cache will operate in fallback / pass-through mode.",
+      "[CACHE] REDIS_URL not configured. Cache will operate in fallback / pass-through mode.",
     );
     return null;
   }
@@ -22,7 +22,7 @@ export const createRedisClient = (): Redis | null => {
       retryStrategy: (times: number) => {
         if (times > 5) {
           logger.warn(
-            `Redis connection retry limit reached (${times} attempts). Stopping reconnect.`,
+            `[CACHE] Redis connection retry limit reached (${times} attempts). Stopping reconnect.`,
           );
           return null; // Stop retrying
         }
@@ -34,24 +34,24 @@ export const createRedisClient = (): Redis | null => {
     const client = new Redis(redisUrl, options);
 
     client.on("connect", () => {
-      logger.info("Connected to Redis server");
+      logger.info("[CACHE] Connected to Redis server");
     });
 
     client.on("ready", () => {
-      logger.info("Redis client is ready to accept commands");
+      logger.info("[CACHE] Redis client is ready");
     });
 
     client.on("error", (err) => {
-      logger.error("Redis connection error:", err.message);
+      logger.error("[CACHE ERROR] Redis connection error:", err.message);
     });
 
     client.on("close", () => {
-      logger.warn("Redis connection closed");
+      logger.warn("[CACHE] Redis connection closed");
     });
 
     return client;
   } catch (error) {
-    logger.error("Failed to initialize Redis client:", error);
+    logger.error("[CACHE ERROR] Failed to initialize Redis client:", error);
     return null;
   }
 };
@@ -67,9 +67,9 @@ export const disconnectRedis = async (): Promise<void> => {
   if (redisInstance) {
     try {
       await redisInstance.quit();
-      logger.info("Redis disconnected gracefully");
+      logger.info("[CACHE] Redis disconnected gracefully");
     } catch (err) {
-      logger.error("Error during Redis disconnect:", err);
+      logger.error("[CACHE ERROR] Error during Redis disconnect:", err);
       redisInstance.disconnect();
     } finally {
       redisInstance = null;

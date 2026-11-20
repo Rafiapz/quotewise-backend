@@ -8,9 +8,7 @@ const envSchema = z.object({
     .string()
     .default("5000")
     .transform((val) => parseInt(val, 10)),
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
+  NODE_ENV: z.string().default("development"),
   DATABASE_URL: z
     .string()
     .default("postgresql://username:password@localhost:5432/quotewise"),

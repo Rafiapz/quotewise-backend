@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { QuotationUseCases } from '../../application/use-cases/quotation.use-cases';
-import { CreateQuotationDTO } from '../../application/dto/quotation.dto';
+import { Request, Response, NextFunction } from "express";
+import { QuotationUseCases } from "../../application/use-cases/quotation.use-cases";
+import { CreateQuotationDTO } from "../../application/dto/quotation.dto";
 
 const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
   const diffMs = leadTime.getTime() - createdAt.getTime();
@@ -8,16 +8,35 @@ const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
   return Math.max(1, days);
 };
 
-export class QuotationController {
-  constructor(private readonly quotationUseCases: QuotationUseCases) {}
+export interface QuotationControllerConstructorParams {
+  QuotationUseCases: QuotationUseCases;
+}
 
-  public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export class QuotationController {
+  private quotationUseCases: QuotationUseCases;
+
+  constructor({
+    QuotationUseCases,
+  }: QuotationControllerConstructorParams) {
+    this.quotationUseCases = QuotationUseCases;
+  }
+
+  getAll = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const rfqId = req.query.rfqId as string | undefined;
       const page = req.query.page ? Number(req.query.page) : undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
       const search = (req.query.search as string) || undefined;
-      const sortBy = (req.query.sortBy as 'price_asc' | 'price_desc' | 'lead_asc' | 'recent') || undefined;
+      const sortBy =
+        (req.query.sortBy as
+          | "price_asc"
+          | "price_desc"
+          | "lead_asc"
+          | "recent") || undefined;
 
       if (rfqId) {
         const result = await this.quotationUseCases.getQuotationsByRfq(rfqId, {
@@ -39,7 +58,9 @@ export class QuotationController {
             validUntil: q.validUntil.toISOString(),
             createdAt: q.createdAt.toISOString(),
             updatedAt: q.updatedAt.toISOString(),
-            isBestPrice: result.lowestUnitPrice !== undefined && q.unitPrice === result.lowestUnitPrice,
+            isBestPrice:
+              result.lowestUnitPrice !== undefined &&
+              q.unitPrice === result.lowestUnitPrice,
           })),
           meta: result.meta,
           lowestUnitPrice: result.lowestUnitPrice,
@@ -68,13 +89,22 @@ export class QuotationController {
     }
   };
 
-  public getByRfq = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getByRfq = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const rfqId = req.params.rfqId || req.params.id;
       const page = req.query.page ? Number(req.query.page) : undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
       const search = (req.query.search as string) || undefined;
-      const sortBy = (req.query.sortBy as 'price_asc' | 'price_desc' | 'lead_asc' | 'recent') || undefined;
+      const sortBy =
+        (req.query.sortBy as
+          | "price_asc"
+          | "price_desc"
+          | "lead_asc"
+          | "recent") || undefined;
 
       const result = await this.quotationUseCases.getQuotationsByRfq(rfqId, {
         page,
@@ -95,7 +125,9 @@ export class QuotationController {
           validUntil: q.validUntil.toISOString(),
           createdAt: q.createdAt.toISOString(),
           updatedAt: q.updatedAt.toISOString(),
-          isBestPrice: result.lowestUnitPrice !== undefined && q.unitPrice === result.lowestUnitPrice,
+          isBestPrice:
+            result.lowestUnitPrice !== undefined &&
+            q.unitPrice === result.lowestUnitPrice,
         })),
         meta: result.meta,
         lowestUnitPrice: result.lowestUnitPrice,
@@ -105,7 +137,11 @@ export class QuotationController {
     }
   };
 
-  public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const rfqId = req.params.rfqId || req.body.rfqId;
       const dto: CreateQuotationDTO = {
@@ -119,7 +155,7 @@ export class QuotationController {
 
       res.status(201).json({
         success: true,
-        message: 'Supplier quotation added successfully',
+        message: "Supplier quotation added successfully",
         data: {
           id: quote.id,
           name: quote.name,
@@ -137,12 +173,16 @@ export class QuotationController {
     }
   };
 
-  public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await this.quotationUseCases.deleteQuotation(req.params.id);
       res.status(200).json({
         success: true,
-        message: 'Supplier quotation deleted successfully',
+        message: "Supplier quotation deleted successfully",
       });
     } catch (error) {
       next(error);

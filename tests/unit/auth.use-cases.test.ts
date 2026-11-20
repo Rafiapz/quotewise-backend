@@ -11,17 +11,17 @@ import { JwtTokenService } from '../../src/modules/auth/infrastructure/services/
 class InMemoryUserRepository implements IUserRepository {
   private users: UserEntity[] = [];
 
-  public async findByEmail(email: string): Promise<UserEntity | null> {
+  async findByEmail(email: string): Promise<UserEntity | null> {
     const user = this.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
     return user || null;
   }
 
-  public async findById(id: string): Promise<UserEntity | null> {
+  async findById(id: string): Promise<UserEntity | null> {
     const user = this.users.find((u) => u.id === id);
     return user || null;
   }
 
-  public async create(data: CreateUserData): Promise<UserEntity> {
+  async create(data: CreateUserData): Promise<UserEntity> {
     const user = new UserEntity(
       `uuid-${this.users.length + 1}`,
       data.companyName,
@@ -55,7 +55,9 @@ describe('Auth Services & UseCases Unit Tests', () => {
 
   describe('JwtTokenService', () => {
     const secret = 'test-secret-key-12345678901234567890';
-    const jwtService = new JwtTokenService(secret, '1h');
+    const jwtService = new JwtTokenService({
+      Config: { JWT_SECRET: secret, JWT_EXPIRES_IN: '1h' } as any,
+    });
 
     it('should sign and verify valid JWT tokens', () => {
       const payload: TokenPayload = {
@@ -88,8 +90,14 @@ describe('Auth Services & UseCases Unit Tests', () => {
     beforeEach(() => {
       repo = new InMemoryUserRepository();
       hasher = new BcryptPasswordHasher(10);
-      tokenService = new JwtTokenService('test-secret-min-32-chars-long-abcde', '1h');
-      useCases = new AuthUseCases(repo, hasher, tokenService);
+      tokenService = new JwtTokenService({
+        Config: { JWT_SECRET: 'test-secret-min-32-chars-long-abcde', JWT_EXPIRES_IN: '1h' } as any,
+      });
+      useCases = new AuthUseCases({
+        UserRepository: repo,
+        PasswordHasher: hasher,
+        TokenService: tokenService,
+      });
     });
 
     it('should successfully register a new user and return safe user with token', async () => {

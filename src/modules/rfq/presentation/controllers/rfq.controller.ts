@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { RFQUseCases } from '../../application/use-cases/rfq.use-cases';
-import { CreateRfqDTO } from '../../application/dto/rfq.dto';
-import { UnauthorizedError } from '../../../../shared/errors/AppError';
+import { Request, Response, NextFunction } from "express";
+import { RFQUseCases } from "../../application/use-cases/rfq.use-cases";
+import { CreateRfqDTO } from "../../application/dto/rfq.dto";
+import { UnauthorizedError } from "../../../../shared/errors/AppError";
 
 const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
   const diffMs = leadTime.getTime() - createdAt.getTime();
@@ -9,15 +9,31 @@ const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
   return Math.max(1, days);
 };
 
-export class RFQController {
-  constructor(private readonly rfqUseCases: RFQUseCases) {}
+export interface RFQControllerConstructorParams {
+  RFQUseCases: RFQUseCases;
+}
 
-  public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export class RFQController {
+  private rfqUseCases: RFQUseCases;
+
+  constructor({
+    RFQUseCases,
+  }: RFQControllerConstructorParams) {
+    this.rfqUseCases = RFQUseCases;
+  }
+
+  getAll = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const page = req.query.page ? Number(req.query.page) : undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
       const search = (req.query.search as string) || undefined;
-      const status = (req.query.status as 'ALL' | 'OPEN' | 'QUOTED' | 'EXPIRED') || undefined;
+      const status =
+        (req.query.status as "ALL" | "OPEN" | "QUOTED" | "EXPIRED") ||
+        undefined;
       const userId = (req.query.userId as string) || undefined;
 
       const result = await this.rfqUseCases.getRfqList({
@@ -47,7 +63,10 @@ export class RFQController {
                 name: rfq.bestQuote.name,
                 unitPrice: rfq.bestQuote.unitPrice,
                 leadTime: rfq.bestQuote.leadTime.toISOString(),
-                leadTimeDays: calculateLeadTimeDays(rfq.bestQuote.leadTime, rfq.bestQuote.createdAt),
+                leadTimeDays: calculateLeadTimeDays(
+                  rfq.bestQuote.leadTime,
+                  rfq.bestQuote.createdAt,
+                ),
                 validUntil: rfq.bestQuote.validUntil.toISOString(),
               }
             : null,
@@ -60,7 +79,11 @@ export class RFQController {
     }
   };
 
-  public getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getById = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const rfq = await this.rfqUseCases.getRfqById(req.params.id);
       res.status(200).json({
@@ -82,7 +105,10 @@ export class RFQController {
                 name: rfq.bestQuote.name,
                 unitPrice: rfq.bestQuote.unitPrice,
                 leadTime: rfq.bestQuote.leadTime.toISOString(),
-                leadTimeDays: calculateLeadTimeDays(rfq.bestQuote.leadTime, rfq.bestQuote.createdAt),
+                leadTimeDays: calculateLeadTimeDays(
+                  rfq.bestQuote.leadTime,
+                  rfq.bestQuote.createdAt,
+                ),
                 validUntil: rfq.bestQuote.validUntil.toISOString(),
               }
             : null,
@@ -103,11 +129,18 @@ export class RFQController {
     }
   };
 
-  public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
-      const resolvedUserId = (req.body.userId as string | undefined) || req.user?.userId;
+      const resolvedUserId =
+        (req.body.userId as string | undefined) || req.user?.userId;
       if (!resolvedUserId) {
-        throw new UnauthorizedError('User authentication required to create an RFQ');
+        throw new UnauthorizedError(
+          "User authentication required to create an RFQ",
+        );
       }
 
       const dto: CreateRfqDTO = {
@@ -121,7 +154,7 @@ export class RFQController {
       const rfq = await this.rfqUseCases.createRfq(dto);
       res.status(201).json({
         success: true,
-        message: 'RFQ created successfully',
+        message: "RFQ created successfully",
         data: {
           id: rfq.id,
           partNumber: rfq.partNumber,
@@ -141,12 +174,16 @@ export class RFQController {
     }
   };
 
-  public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  update = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const updated = await this.rfqUseCases.updateRfq(req.params.id, req.body);
       res.status(200).json({
         success: true,
-        message: 'RFQ updated successfully',
+        message: "RFQ updated successfully",
         data: {
           id: updated.id,
           partNumber: updated.partNumber,
@@ -164,7 +201,10 @@ export class RFQController {
                 name: updated.bestQuote.name,
                 unitPrice: updated.bestQuote.unitPrice,
                 leadTime: updated.bestQuote.leadTime.toISOString(),
-                leadTimeDays: calculateLeadTimeDays(updated.bestQuote.leadTime, updated.bestQuote.createdAt),
+                leadTimeDays: calculateLeadTimeDays(
+                  updated.bestQuote.leadTime,
+                  updated.bestQuote.createdAt,
+                ),
                 validUntil: updated.bestQuote.validUntil.toISOString(),
               }
             : null,
@@ -175,12 +215,16 @@ export class RFQController {
     }
   };
 
-  public delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  delete = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       await this.rfqUseCases.deleteRfq(req.params.id);
       res.status(200).json({
         success: true,
-        message: 'RFQ and associated quotes deleted successfully',
+        message: "RFQ and associated quotes deleted successfully",
       });
     } catch (error) {
       next(error);

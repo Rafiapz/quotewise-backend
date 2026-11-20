@@ -1,6 +1,6 @@
 export class AppError extends Error {
-  public readonly statusCode: number;
-  public readonly isOperational: boolean;
+  readonly statusCode: number;
+  readonly isOperational: boolean;
 
   constructor(message: string, statusCode = 500, isOperational = true) {
     super(message);
@@ -36,7 +36,7 @@ export class ConflictError extends AppError {
 }
 
 export class ValidationError extends AppError {
-  public readonly errors: Record<string, string[]>;
+  readonly errors: Record<string, string[]>;
 
   constructor(message: string, errors: Record<string, string[]>) {
     super(message, 422);

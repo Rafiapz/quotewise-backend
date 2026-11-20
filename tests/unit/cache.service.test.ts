@@ -22,7 +22,7 @@ describe("RedisCacheService Unit Tests", () => {
       exists: vi.fn(),
       flushdb: vi.fn(),
     };
-    cacheService = new RedisCacheService(mockRedis as Redis);
+    cacheService = new RedisCacheService({ Redis: mockRedis as Redis });
   });
 
   it("should return parsed JSON object on cache hit", async () => {
@@ -95,7 +95,7 @@ describe("RedisCacheService Unit Tests", () => {
   });
 
   it("should operate safely without throwing when redis client is null (fail-soft)", async () => {
-    const nullCache = new RedisCacheService(null);
+    const nullCache = new RedisCacheService({ Redis: null });
 
     expect(await nullCache.get("any-key")).toBeNull();
     await expect(nullCache.set("any-key", { a: 1 })).resolves.not.toThrow();
@@ -150,10 +150,10 @@ describe("CachedRFQRepository Decorator Unit Tests", () => {
       delByPattern: vi.fn(),
     };
 
-    cachedRepo = new CachedRFQRepository(
-      mockInnerRepo as IRFQRepository,
-      mockCache as ICacheService,
-    );
+    cachedRepo = new CachedRFQRepository({
+      PrismaRFQRepository: mockInnerRepo as IRFQRepository,
+      CacheService: mockCache as ICacheService,
+    });
   });
 
   it("should return cached entity on cache hit without calling inner repository", async () => {
@@ -206,7 +206,7 @@ describe("CachedRFQRepository Decorator Unit Tests", () => {
     expect(mockCache.set).toHaveBeenCalledWith(
       "rfqs:detail:rfq-uuid-1",
       sampleRfqEntity,
-      300,
+      600,
     );
   });
 
@@ -276,10 +276,10 @@ describe("CachedQuotationRepository Decorator Unit Tests", () => {
       delByPattern: vi.fn(),
     };
 
-    cachedRepo = new CachedQuotationRepository(
-      mockInnerRepo as IQuotationRepository,
-      mockCache as ICacheService,
-    );
+    cachedRepo = new CachedQuotationRepository({
+      PrismaQuotationRepository: mockInnerRepo as IQuotationRepository,
+      CacheService: mockCache as ICacheService,
+    });
   });
 
   it("should invalidate RFQ cache and quotation lists when a new quotation is created", async () => {

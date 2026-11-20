@@ -13,17 +13,17 @@ import { JwtTokenService } from '../../src/modules/auth/infrastructure/services/
 import { errorHandler } from '../../src/shared/middleware/errorHandler';
 
 class MockUserRepository implements IUserRepository {
-  public users: UserEntity[] = [];
+  users: UserEntity[] = [];
 
-  public async findByEmail(email: string): Promise<UserEntity | null> {
+  async findByEmail(email: string): Promise<UserEntity | null> {
     return this.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) || null;
   }
 
-  public async findById(id: string): Promise<UserEntity | null> {
+  async findById(id: string): Promise<UserEntity | null> {
     return this.users.find((u) => u.id === id) || null;
   }
 
-  public async create(data: CreateUserData): Promise<UserEntity> {
+  async create(data: CreateUserData): Promise<UserEntity> {
     const user = new UserEntity(
       `user-uuid-${this.users.length + 1}`,
       data.companyName,
@@ -43,13 +43,18 @@ describe('Auth API HTTP & Cookie Integration Tests', () => {
   beforeEach(() => {
     mockUserRepo = new MockUserRepository();
     const hasher = new BcryptPasswordHasher(10);
-    const tokenService = new JwtTokenService('test-secret-key-32-characters-min-abcde', '1h');
-    const authUseCases = new AuthUseCases(mockUserRepo, hasher, tokenService);
+    const tokenService = new JwtTokenService({
+      Config: { JWT_SECRET: 'test-secret-key-32-characters-min-abcde', JWT_EXPIRES_IN: '1h' } as any,
+    });
+    const authUseCases = new AuthUseCases({
+      UserRepository: mockUserRepo,
+      PasswordHasher: hasher,
+      TokenService: tokenService,
+    });
 
-    const authController = new AuthController(authUseCases, {
-      name: 'token',
-      isProduction: false,
-      maxAgeMs: 7 * 24 * 60 * 60 * 1000,
+    const authController = new AuthController({
+      AuthUseCases: authUseCases,
+      Config: { COOKIE_NAME: 'token' } as any,
     });
     const authMiddleware = createAuthMiddleware(tokenService, 'token');
 

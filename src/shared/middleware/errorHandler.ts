@@ -34,7 +34,7 @@ export const errorHandler = (
       success: false,
       message:
         'Database connection failed. Please ensure PostgreSQL is running and DATABASE_URL in .env contains valid credentials.',
-      detail: process.env.NODE_ENV === 'production' ? undefined : err.message,
+      detail: err.message,
     });
     return;
   }
@@ -74,9 +74,6 @@ export const errorHandler = (
 
   res.status(500).json({
     success: false,
-    message:
-      process.env.NODE_ENV === 'production'
-        ? 'An unexpected internal error occurred'
-        : err.message,
+    message: err.message || 'An unexpected internal error occurred',
   });
 };

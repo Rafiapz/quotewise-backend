@@ -1,6 +1,6 @@
-import { SupplierQuoteEntity } from '../../../quotation/domain/entities/quotation.entity';
+import { SupplierQuoteEntity } from "../../../quotation/domain/entities/quotation.entity";
 
-export type RfqStatus = 'OPEN' | 'QUOTED' | 'EXPIRED';
+export type RfqStatus = "OPEN" | "QUOTED" | "EXPIRED";
 
 export interface RFQProps {
   id: string;
@@ -16,16 +16,16 @@ export interface RFQProps {
 }
 
 export class RFQEntity {
-  public readonly id: string;
-  public readonly partNumber: string;
-  public readonly description: string;
-  public readonly quantity: number;
-  public readonly neededBy: Date;
-  public readonly userId: string;
-  public readonly isActive: boolean;
-  public readonly createdAt: Date;
-  public readonly updatedAt: Date;
-  public readonly quotes: SupplierQuoteEntity[];
+  readonly id: string;
+  readonly partNumber: string;
+  readonly description: string;
+  readonly quantity: number;
+  readonly neededBy: Date;
+  readonly userId: string;
+  readonly isActive: boolean;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly quotes: SupplierQuoteEntity[];
 
   constructor(props: RFQProps) {
     this.id = props.id;
@@ -46,21 +46,21 @@ export class RFQEntity {
    * - QUOTED if quotations have been received
    * - OPEN if pending quotations
    */
-  public get status(): RfqStatus {
+  get status(): RfqStatus {
     const now = new Date();
     if (this.neededBy.getTime() < now.getTime()) {
-      return 'EXPIRED';
+      return "EXPIRED";
     }
     if (this.quotes.length > 0) {
-      return 'QUOTED';
+      return "QUOTED";
     }
-    return 'OPEN';
+    return "OPEN";
   }
 
   /**
    * Calculates best quotation dynamically (lowest unit price).
    */
-  public get bestQuote(): SupplierQuoteEntity | null {
+  get bestQuote(): SupplierQuoteEntity | null {
     if (this.quotes.length === 0) {
       return null;
     }
@@ -70,7 +70,26 @@ export class RFQEntity {
     }, this.quotes[0]);
   }
 
-  public get quoteCount(): number {
+  get quoteCount(): number {
     return this.quotes.length;
+  }
+
+  static fromJSON(raw: any): RFQEntity {
+    const quotes = (raw.quotes || []).map((q: any) =>
+      SupplierQuoteEntity.fromJSON(q),
+    );
+
+    return new RFQEntity({
+      id: raw.id,
+      partNumber: raw.partNumber,
+      description: raw.description,
+      quantity: raw.quantity,
+      neededBy: raw.neededBy instanceof Date ? raw.neededBy : new Date(raw.neededBy),
+      userId: raw.userId,
+      isActive: raw.isActive !== undefined ? raw.isActive : true,
+      createdAt: raw.createdAt instanceof Date ? raw.createdAt : new Date(raw.createdAt),
+      updatedAt: raw.updatedAt instanceof Date ? raw.updatedAt : new Date(raw.updatedAt),
+      quotes,
+    });
   }
 }

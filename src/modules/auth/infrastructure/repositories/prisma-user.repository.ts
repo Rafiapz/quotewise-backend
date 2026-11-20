@@ -1,11 +1,24 @@
-import { PrismaClient } from '@prisma/client';
-import { IUserRepository, CreateUserData } from '../../domain/repositories/user.repository.interface';
-import { UserEntity } from '../../domain/entities/user.entity';
+import { PrismaClient } from "@prisma/client";
+import {
+  IUserRepository,
+  CreateUserData,
+} from "../../domain/repositories/user.repository.interface";
+import { UserEntity } from "../../domain/entities/user.entity";
+
+export interface PrismaUserRepositoryConstructorParams {
+  Prisma: PrismaClient;
+}
 
 export class PrismaUserRepository implements IUserRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  private prisma: PrismaClient;
 
-  public async findByEmail(email: string): Promise<UserEntity | null> {
+  constructor({
+    Prisma,
+  }: PrismaUserRepositoryConstructorParams) {
+    this.prisma = Prisma;
+  }
+
+  async findByEmail(email: string): Promise<UserEntity | null> {
     const normalizedEmail = email.toLowerCase().trim();
     const record = await this.prisma.user.findFirst({
       where: {
@@ -24,11 +37,11 @@ export class PrismaUserRepository implements IUserRepository {
       record.email,
       record.password,
       record.createdAt,
-      record.isActive
+      record.isActive,
     );
   }
 
-  public async findById(id: string): Promise<UserEntity | null> {
+  async findById(id: string): Promise<UserEntity | null> {
     const record = await this.prisma.user.findFirst({
       where: {
         id,
@@ -46,11 +59,11 @@ export class PrismaUserRepository implements IUserRepository {
       record.email,
       record.password,
       record.createdAt,
-      record.isActive
+      record.isActive,
     );
   }
 
-  public async create(data: CreateUserData): Promise<UserEntity> {
+  async create(data: CreateUserData): Promise<UserEntity> {
     const record = await this.prisma.user.create({
       data: {
         companyName: data.companyName.trim(),
@@ -65,8 +78,7 @@ export class PrismaUserRepository implements IUserRepository {
       record.email,
       record.password,
       record.createdAt,
-      record.isActive
+      record.isActive,
     );
   }
 }
-
