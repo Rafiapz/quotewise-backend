@@ -70,14 +70,7 @@ export class PrismaRFQRepository implements IRFQRepository {
 
     const userScope = options.userId ? { userId: options.userId } : {};
 
-    const [
-      filteredTotal,
-      records,
-      totalCount,
-      openCount,
-      quotedCount,
-      expiredCount,
-    ] = await this.prisma.$transaction([
+    const [filteredTotal, records, statsRaw] = await Promise.all([
       this.prisma.rFQ.count({ where }),
       this.prisma.rFQ.findMany({
         where,
@@ -90,33 +83,31 @@ export class PrismaRFQRepository implements IRFQRepository {
         skip: (page - 1) * limit,
         take: limit,
       }),
-      this.prisma.rFQ.count({
+      this.prisma.rFQ.findMany({
         where: { isActive: true, ...userScope },
-      }),
-      this.prisma.rFQ.count({
-        where: {
-          isActive: true,
-          neededBy: { gte: now },
-          quotes: { none: { isActive: true } },
-          ...userScope,
-        },
-      }),
-      this.prisma.rFQ.count({
-        where: {
-          isActive: true,
-          neededBy: { gte: now },
-          quotes: { some: { isActive: true } },
-          ...userScope,
-        },
-      }),
-      this.prisma.rFQ.count({
-        where: {
-          isActive: true,
-          neededBy: { lt: now },
-          ...userScope,
+        select: {
+          neededBy: true,
+          _count: {
+            select: { quotes: { where: { isActive: true } } },
+          },
         },
       }),
     ]);
+
+    let totalCount = statsRaw.length;
+    let openCount = 0;
+    let quotedCount = 0;
+    let expiredCount = 0;
+
+    for (const item of statsRaw) {
+      if (item.neededBy < now) {
+        expiredCount++;
+      } else if (item._count.quotes > 0) {
+        quotedCount++;
+      } else {
+        openCount++;
+      }
+    }
 
     const totalPages = Math.ceil(filteredTotal / limit) || 1;
 

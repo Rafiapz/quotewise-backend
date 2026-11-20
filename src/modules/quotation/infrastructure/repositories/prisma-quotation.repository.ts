@@ -56,22 +56,36 @@ export class PrismaQuotationRepository implements IQuotationRepository {
       orderBy = { createdAt: "desc" };
     }
 
-    const [filteredTotal, minPriceAgg, records] =
-      await this.prisma.$transaction([
-        this.prisma.supplierQuote.count({ where }),
-        this.prisma.supplierQuote.aggregate({
-          where: { rfqId, isActive: true },
-          _min: { unitPrice: true },
-        }),
-        this.prisma.supplierQuote.findMany({
-          where,
-          orderBy,
-          skip: (page - 1) * limit,
-          take: limit,
-        }),
-      ]);
+    const isDefaultSort = !options.sortBy || options.sortBy === "price_asc";
+    const isFirstPage = page === 1;
+    const hasSearch = Boolean(options.search && options.search.trim());
+
+    // Execute concurrently with Promise.all (no slow $transaction block)
+    const [filteredTotal, records, minPriceAgg] = await Promise.all([
+      this.prisma.supplierQuote.count({ where }),
+      this.prisma.supplierQuote.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      // Only execute separate aggregate query if min price cannot be derived from page 1 records
+      !hasSearch && isDefaultSort && isFirstPage
+        ? Promise.resolve(null)
+        : this.prisma.supplierQuote.aggregate({
+            where: { rfqId, isActive: true },
+            _min: { unitPrice: true },
+          }),
+    ]);
 
     const totalPages = Math.ceil(filteredTotal / limit) || 1;
+
+    const lowestUnitPrice =
+      minPriceAgg?._min?.unitPrice !== undefined && minPriceAgg?._min?.unitPrice !== null
+        ? Number(minPriceAgg._min.unitPrice)
+        : records.length > 0 && isDefaultSort && !hasSearch
+        ? Number(records[0].unitPrice)
+        : undefined;
 
     return {
       items: records.map((record) => this.mapToEntity(record)),
@@ -83,9 +97,7 @@ export class PrismaQuotationRepository implements IQuotationRepository {
         hasNext: page < totalPages,
         hasPrev: page > 1,
       },
-      lowestUnitPrice: minPriceAgg._min.unitPrice
-        ? Number(minPriceAgg._min.unitPrice)
-        : undefined,
+      lowestUnitPrice,
     };
   }
 

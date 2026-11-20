@@ -24,7 +24,7 @@ model RFQ {
   partNumber  String          @map("part_number")
   description String          @db.Text
   quantity    Int
-  neededBy    DateTime        @map("needed_by")
+  neededBy    DateTime        @db.Date @map("needed_by")
   isActive    Boolean         @default(true) @map("is_active")
   createdAt   DateTime        @default(now()) @map("created_at")
   updatedAt   DateTime        @updatedAt @map("updated_at")
@@ -41,8 +41,8 @@ model SupplierQuote {
   name       String
   rfqId      String   @map("rfq_id") @db.Uuid
   unitPrice  Decimal  @map("unit_price") @db.Decimal(12, 2)
-  leadTime   DateTime @map("lead_time")
-  validUntil DateTime @map("valid_until")
+  leadTime   DateTime @db.Date @map("lead_time")
+  validUntil DateTime @db.Date @map("valid_until")
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")

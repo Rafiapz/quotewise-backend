@@ -18,7 +18,18 @@ export const createQuotationSchema = z.object({
     .min(1, 'Valid until date is required')
     .refine((val) => !isNaN(Date.parse(val)), {
       message: 'validUntil must be a valid date string',
-    }),
+    })
+    .refine(
+      (val) => {
+        const parsed = new Date(val);
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        return parsed >= startOfToday;
+      },
+      {
+        message: 'Valid until date cannot be in the past',
+      },
+    ),
 });
 
 export const createQuotationForRfqBodySchema = createQuotationSchema.omit({ rfqId: true }).extend({

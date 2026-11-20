@@ -7,7 +7,7 @@ import {
 import { IQuotationRepository } from "../../../quotation/domain/repositories/quotation.repository.interface";
 import { CreateRfqDTO, UpdateRfqDTO } from "../dto/rfq.dto";
 import { RFQEntity } from "../../domain/entities/rfq.entity";
-import { NotFoundError } from "../../../../shared/errors/AppError";
+import { NotFoundError, ForbiddenError, ValidationError } from "../../../../shared/errors/AppError";
 
 export interface RFQUseCasesConstructorParams {
   RFQRepository: IRFQRepository;
@@ -27,19 +27,37 @@ export class RFQUseCases {
   }
 
   async createRfq(dto: CreateRfqDTO): Promise<RFQEntity> {
+    const neededByDate = new Date(dto.neededBy);
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    if (neededByDate < startOfToday) {
+      throw new ValidationError("Needed by date cannot be in the past", {
+        neededBy: ["Needed by date cannot be in the past"],
+      });
+    }
+
     return this.rfqRepository.create({
       partNumber: dto.partNumber,
       description: dto.description,
       quantity: dto.quantity,
-      neededBy: new Date(dto.neededBy),
+      neededBy: neededByDate,
       userId: dto.userId,
     });
   }
 
-  async updateRfq(id: string, dto: UpdateRfqDTO): Promise<RFQEntity> {
+  async updateRfq(
+    id: string,
+    dto: UpdateRfqDTO,
+    requestingUserId?: string,
+  ): Promise<RFQEntity> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found`);
+    }
+
+    if (requestingUserId && rfq.userId !== requestingUserId) {
+      throw new ForbiddenError("You do not have permission to update this RFQ");
     }
 
     const updatePayload: UpdateRFQData = {};
@@ -54,7 +72,17 @@ export class RFQUseCases {
       updatePayload.quantity = dto.quantity;
     }
     if (dto.neededBy !== undefined) {
-      updatePayload.neededBy = new Date(dto.neededBy);
+      const neededByDate = new Date(dto.neededBy);
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      if (neededByDate < startOfToday) {
+        throw new ValidationError("Needed by date cannot be in the past", {
+          neededBy: ["Needed by date cannot be in the past"],
+        });
+      }
+
+      updatePayload.neededBy = neededByDate;
     }
 
     const updated = await this.rfqRepository.update(id, updatePayload);
@@ -70,18 +98,27 @@ export class RFQUseCases {
     return this.rfqRepository.findAll(options);
   }
 
-  async getRfqById(id: string): Promise<RFQEntity> {
+  async getRfqById(id: string, requestingUserId?: string): Promise<RFQEntity> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found`);
     }
+
+    if (requestingUserId && rfq.userId !== requestingUserId) {
+      throw new ForbiddenError("You do not have access to this RFQ");
+    }
+
     return rfq;
   }
 
-  async deleteRfq(id: string): Promise<boolean> {
+  async deleteRfq(id: string, requestingUserId?: string): Promise<boolean> {
     const rfq = await this.rfqRepository.findById(id);
     if (!rfq) {
       throw new NotFoundError(`RFQ with ID ${id} not found or already deleted`);
+    }
+
+    if (requestingUserId && rfq.userId !== requestingUserId) {
+      throw new ForbiddenError("You do not have permission to delete this RFQ");
     }
 
     if (this.quotationRepository) {

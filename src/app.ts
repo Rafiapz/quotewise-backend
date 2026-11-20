@@ -71,7 +71,7 @@ export const createApp = (
   );
   app.use(
     "/api/quotations",
-    createQuotationRouter(QuotationController),
+    createQuotationRouter(QuotationController, AuthMiddleware),
   );
 
   // Centralized Error Handling

@@ -341,5 +341,39 @@ describe("RFQEntity Domain Unit Tests", () => {
       expect(rfq.bestQuote?.id).toBe("q-faster");
       expect(rfq.bestQuote?.name).toBe("Express Freight");
     });
+
+    it("should consider a quote arriving on the neededBy day as on-time", () => {
+      // Both stored in date-only format (e.g. 2026-11-25)
+      const neededByDate = new Date("2026-11-25");
+      const arrivalDate = new Date("2026-11-25");
+      const validUntil = new Date("2026-11-30");
+
+      const sameDayQuote = new SupplierQuoteEntity({
+        id: "q-same-day",
+        rfqId: "rfq-1",
+        name: "Prompt Delivery Ltd",
+        unitPrice: 150,
+        leadTime: arrivalDate,
+        validUntil: validUntil,
+        createdAt: new Date("2026-11-20T10:00:00.000Z"),
+        updatedAt: new Date("2026-11-20T10:00:00.000Z"),
+      });
+
+      const rfq = new RFQEntity({
+        id: "rfq-1",
+        partNumber: "GASKET-5",
+        description: "Silicone Gasket",
+        quantity: 100,
+        neededBy: neededByDate,
+        userId: "user-1",
+        createdAt: new Date("2026-11-20T10:00:00.000Z"),
+        updatedAt: new Date("2026-11-20T10:00:00.000Z"),
+        quotes: [sameDayQuote],
+      });
+
+      const best = rfq.getBestQuoteAsOf(new Date("2026-11-20T10:00:00.000Z"));
+      expect(best).not.toBeNull();
+      expect(best?.id).toBe("q-same-day");
+    });
   });
 });

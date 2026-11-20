@@ -1,15 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { QuotationUseCases } from "../../application/use-cases/quotation.use-cases";
 import { CreateQuotationDTO } from "../../application/dto/quotation.dto";
-
-const calculateLeadTimeDays = (leadTime: Date, createdAt: Date): number => {
-  const diffMs = leadTime.getTime() - createdAt.getTime();
-  const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(1, days);
-};
+import { RFQUseCases } from "../../../rfq/application/use-cases/rfq.use-cases";
+import { calculateLeadTimeDays } from "../../../../shared/utils/date.utils";
 
 export interface QuotationControllerConstructorParams {
   QuotationUseCases: QuotationUseCases;
+  RFQUseCases?: RFQUseCases;
 }
 
 export class QuotationController {
@@ -39,12 +36,11 @@ export class QuotationController {
           | "recent") || undefined;
 
       if (rfqId) {
-        const result = await this.quotationUseCases.getQuotationsByRfq(rfqId, {
-          page,
-          limit,
-          search,
-          sortBy,
-        });
+        const result = await this.quotationUseCases.getQuotationsByRfq(
+          rfqId,
+          { page, limit, search, sortBy },
+          req.user?.userId,
+        );
 
         res.status(200).json({
           success: true,
@@ -68,7 +64,9 @@ export class QuotationController {
         return;
       }
 
-      const quotes = await this.quotationUseCases.getAllQuotations();
+      const quotes = await this.quotationUseCases.getAllQuotations(
+        req.user?.userId,
+      );
 
       res.status(200).json({
         success: true,
@@ -95,7 +93,7 @@ export class QuotationController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const rfqId = req.params.rfqId || req.params.id;
+      const rfqId = req.params?.rfqId || req.params?.id;
       const page = req.query.page ? Number(req.query.page) : undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
       const search = (req.query.search as string) || undefined;
@@ -106,12 +104,11 @@ export class QuotationController {
           | "lead_asc"
           | "recent") || undefined;
 
-      const result = await this.quotationUseCases.getQuotationsByRfq(rfqId, {
-        page,
-        limit,
-        search,
-        sortBy,
-      });
+      const result = await this.quotationUseCases.getQuotationsByRfq(
+        rfqId,
+        { page, limit, search, sortBy },
+        req.user?.userId,
+      );
 
       res.status(200).json({
         success: true,
@@ -143,15 +140,20 @@ export class QuotationController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      const rfqId = req.params.rfqId || req.body.rfqId;
+      const rfqId = String(req.params?.rfqId || req.body?.rfqId);
+
       const dto: CreateQuotationDTO = {
         name: String(req.body.name),
-        rfqId: String(rfqId),
+        rfqId,
         unitPrice: Number(req.body.unitPrice),
         leadTime: req.body.leadTime,
         validUntil: String(req.body.validUntil),
       };
-      const quote = await this.quotationUseCases.createQuotation(dto);
+
+      const quote = await this.quotationUseCases.createQuotation(
+        dto,
+        req.user?.userId,
+      );
 
       res.status(201).json({
         success: true,
@@ -179,7 +181,11 @@ export class QuotationController {
     next: NextFunction,
   ): Promise<void> => {
     try {
-      await this.quotationUseCases.deleteQuotation(req.params.id);
+      await this.quotationUseCases.deleteQuotation(
+        req.params.id,
+        req.user?.userId,
+      );
+
       res.status(200).json({
         success: true,
         message: "Supplier quotation deleted successfully",

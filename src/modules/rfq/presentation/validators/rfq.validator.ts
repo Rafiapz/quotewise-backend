@@ -14,7 +14,18 @@ export const createRfqSchema = z.object({
     .min(1, 'Needed by date is required')
     .refine((val) => !isNaN(Date.parse(val)), {
       message: 'neededBy must be a valid date string',
-    }),
+    })
+    .refine(
+      (val) => {
+        const parsed = new Date(val);
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        return parsed >= startOfToday;
+      },
+      {
+        message: 'Needed by date cannot be in the past',
+      },
+    ),
   userId: z.string().uuid('Valid user ID is required').optional(),
 });
 

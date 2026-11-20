@@ -66,28 +66,35 @@ export class RFQEntity {
   /**
    * Finds the BEST quote:
    * The cheapest quote that is still valid AND can arrive in time for "needed by".
+   * A cheaper quote that would arrive late is not the best quote.
    * If unit prices are tied, the quote with the earlier delivery is selected.
    */
   getBestQuoteAsOf(asOf: Date = new Date()): SupplierQuoteEntity | null {
-    // 1. Filter: quotes that are valid and arrive on time
-    const eligibleQuotes = this.quotes.filter(
-      (q) =>
-        new Date(q.validUntil).getTime() >= asOf.getTime() &&
-        new Date(q.leadTime).getTime() <= this.neededBy.getTime(),
-    );
+    const asOfTime = asOf.getTime();
+    const neededByTime = this.neededBy.getTime();
+
+    // 1. Filter: quotes that are still valid AND arrive in time
+    const eligibleQuotes = this.quotes.filter((q) => {
+      const isValid = new Date(q.validUntil).getTime() >= asOfTime;
+      const arrivesInTime = new Date(q.leadTime).getTime() <= neededByTime;
+      return isValid && arrivesInTime;
+    });
 
     if (eligibleQuotes.length === 0) return null;
 
-    // 2. Sort: lowest price first; on price tie, earliest delivery first
-    eligibleQuotes.sort((a, b) => {
-      if (a.unitPrice !== b.unitPrice) {
-        return a.unitPrice - b.unitPrice;
+    // 2. Select cheapest; if tied on price, pick earliest delivery
+    return eligibleQuotes.reduce((best, current) => {
+      if (current.unitPrice < best.unitPrice) return current;
+      if (current.unitPrice === best.unitPrice) {
+        return (
+          new Date(current.leadTime).getTime() <
+          new Date(best.leadTime).getTime()
+            ? current
+            : best
+        );
       }
-      return new Date(a.leadTime).getTime() - new Date(b.leadTime).getTime();
+      return best;
     });
-
-    // 3. The best quote is the first one
-    return eligibleQuotes[0];
   }
 
   get bestQuote(): SupplierQuoteEntity | null {

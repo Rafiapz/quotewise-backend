@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { QuotationController } from '../controllers/quotation.controller';
 import { validateRequest } from '../../../../shared/middleware/validateRequest';
 import {
@@ -9,8 +9,15 @@ import {
   quotationListQuerySchema,
 } from '../validators/quotation.validator';
 
-export const createQuotationRouter = (quotationController: QuotationController): Router => {
+export const createQuotationRouter = (
+  quotationController: QuotationController,
+  authMiddleware?: RequestHandler,
+): Router => {
   const router = Router();
+
+  if (authMiddleware) {
+    router.use(authMiddleware);
+  }
 
   // GET /api/quotations (optional query params: rfqId, page, limit, search, sortBy)
   router.get(
