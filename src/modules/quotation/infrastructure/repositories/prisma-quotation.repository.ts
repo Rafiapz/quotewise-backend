@@ -14,9 +14,7 @@ export interface PrismaQuotationRepositoryConstructorParams {
 export class PrismaQuotationRepository implements IQuotationRepository {
   private prisma: PrismaClient;
 
-  constructor({
-    Prisma,
-  }: PrismaQuotationRepositoryConstructorParams) {
+  constructor({ Prisma }: PrismaQuotationRepositoryConstructorParams) {
     this.prisma = Prisma;
   }
 
@@ -81,11 +79,12 @@ export class PrismaQuotationRepository implements IQuotationRepository {
     const totalPages = Math.ceil(filteredTotal / limit) || 1;
 
     const lowestUnitPrice =
-      minPriceAgg?._min?.unitPrice !== undefined && minPriceAgg?._min?.unitPrice !== null
+      minPriceAgg?._min?.unitPrice !== undefined &&
+      minPriceAgg?._min?.unitPrice !== null
         ? Number(minPriceAgg._min.unitPrice)
         : records.length > 0 && isDefaultSort && !hasSearch
-        ? Number(records[0].unitPrice)
-        : undefined;
+          ? Number(records[0].unitPrice)
+          : undefined;
 
     return {
       items: records.map((record) => this.mapToEntity(record)),

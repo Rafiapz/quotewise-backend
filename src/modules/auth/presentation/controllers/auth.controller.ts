@@ -87,19 +87,23 @@ export class AuthController {
     }
   };
 
-  logout = (req: Request, res: Response): void => {
-    const cookieOptions = this.getCookieOptions(req);
-    res.clearCookie(this.cookieName, {
-      httpOnly: cookieOptions.httpOnly,
-      secure: cookieOptions.secure,
-      sameSite: cookieOptions.sameSite,
-      path: cookieOptions.path,
-    });
+  logout = (req: Request, res: Response, next: NextFunction): void => {
+    try {
+      const cookieOptions = this.getCookieOptions(req);
+      res.clearCookie(this.cookieName, {
+        httpOnly: cookieOptions.httpOnly,
+        secure: cookieOptions.secure,
+        sameSite: cookieOptions.sameSite,
+        path: cookieOptions.path,
+      });
 
-    res.status(200).json({
-      success: true,
-      message: "Logged out successfully",
-    });
+      res.status(200).json({
+        success: true,
+        message: "Logged out successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 
   me = async (

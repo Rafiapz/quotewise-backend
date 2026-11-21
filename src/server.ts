@@ -32,3 +32,14 @@ const gracefulShutdown = async () => {
 
 process.on('SIGTERM', () => gracefulShutdown());
 process.on('SIGINT', () => gracefulShutdown());
+
+// Catch unhandled Promise rejections and uncaught exceptions to prevent silent process crashes
+process.on('unhandledRejection', (reason: unknown) => {
+  logger.error('Unhandled Rejection detected at process level:', reason);
+});
+
+process.on('uncaughtException', (error: Error) => {
+  logger.error('Uncaught Exception detected at process level:', error);
+  // Ensure graceful shutdown if critical uncaught state occurs
+  gracefulShutdown();
+});
