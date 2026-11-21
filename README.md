@@ -1,115 +1,120 @@
-# QuoteWise Backend
+# QuoteWise — Backend
 
-Production-ready backend API service for RFQ and Supplier Quotation management, built with Clean Architecture, Express.js, TypeScript, PostgreSQL, and Prisma ORM.
+A clean and scalable REST API service for RFQ (Request for Quotation) and Supplier Quotation management, built with Express.js, TypeScript, PostgreSQL (Prisma), Awilix, and Redis.
+
+## Features
+
+- **Authentication**: JWT-based authentication with secure HTTP-only cookies and bcrypt password hashing.
+- **RFQ Management**: Create and track RFQs with dynamic statuses (`OPEN`, `QUOTED`, `EXPIRED`).
+- **Supplier Quotations**: Submit quotes, validate deadlines and lead times, and automatically calculate the best quote.
+- **Clean Architecture**: Domain, Application, Infrastructure, and Presentation layers powered by Awilix dependency injection.
+- **Resilient Caching**: Redis caching with automated fallback to database queries if Redis is offline.
 
 ## Tech Stack
 
-- **Runtime:** Node.js + Express.js
-- **Language:** TypeScript (strict mode enabled)
-- **Database ORM:** PostgreSQL + Prisma ORM
-- **Validation:** Zod schemas
-- **Security & Utilities:** Helmet, CORS, Morgan
-- **Testing:** Vitest + Supertest
+- **Runtime**: Node.js & Express.js
+- **Language**: TypeScript
+- **Database & ORM**: PostgreSQL & Prisma ORM
+- **Cache**: Redis (`ioredis`)
+- **Validation**: Zod
+- **Testing**: Vitest & Supertest
 
-## Clean Architecture Design
-
-The backend strictly adheres to Clean Architecture and Dependency Inversion:
-
-```
-backend/
-├── prisma/
-│   ├── schema.prisma              # Database schema definitions
-│   └── migrations/                # Database migrations
-├── src/
-│   ├── config/                    # Environment variables & database client
-│   ├── modules/
-│   │   ├── rfq/                   # RFQ domain module
-│   │   │   ├── domain/            # Entities, domain logic, repository interfaces
-│   │   │   ├── application/       # Use-cases and DTO validation schemas
-│   │   │   ├── infrastructure/    # Prisma repository implementations
-│   │   │   └── presentation/      # Express controllers and route definitions
-│   │   └── quotation/             # Quotation domain module
-│   │       ├── domain/            # Entities and repository interfaces
-│   │       ├── application/       # Use-cases and DTO validation schemas
-│   │       ├── infrastructure/    # Prisma repository implementations
-│   │       └── presentation/      # Express controllers and route definitions
-│   ├── shared/                    # Centralized errors, middleware, types, logger
-│   ├── app.ts                     # Express app configuration & middleware
-│   └── server.ts                  # HTTP server listener
-├── tests/                         # Vitest unit & integration test suites
-├── .env.example
-├── package.json
-└── tsconfig.json
-```
-
-### Key Principles
-
-1. **Dependency Inversion:** Domain and application layers have zero dependencies on Express or Prisma.
-2. **Dynamic Calculations:** RFQ status (`OPEN`, `QUOTED`, `EXPIRED`) and best quotations are dynamically calculated by domain entities rather than stored as manually maintained database flags.
-3. **Zod Validation:** All incoming HTTP payloads and params are validated prior to controller invocation.
-4. **Centralized Error Handling:** Operational and validation errors are converted to uniform API response structures.
+---
 
 ## Getting Started
 
-### Prerequisites
+### 1. Prerequisites
 
-- Node.js (>= 18)
-- PostgreSQL database instance
+- **Node.js** (v18 or higher)
+- **PostgreSQL** database (local or hosted, e.g., Neon)
+- **Redis** *(Optional)*
 
-### Installation
+### 2. Installation
 
 ```bash
 cd quotewise-backend
 npm install
 ```
 
-### Environment Configuration
+### 3. Environment Variables
 
-Copy `.env.example` to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-Set the database connection string:
+Create a `.env` file in the root of `quotewise-backend`:
 
 ```env
 PORT=5000
 NODE_ENV=development
 DATABASE_URL="postgresql://username:password@localhost:5432/quotewise"
 FRONTEND_URL=http://localhost:5173
+JWT_SECRET=your-secret-key-here
+JWT_EXPIRES_IN=7d
+COOKIE_NAME=token
+# REDIS_URL=redis://localhost:6379  # Optional
 ```
 
-### Prisma Client Generation
+### 4. Database Setup
 
-Generate the Prisma client types:
+Generate the Prisma client and push the schema to your database:
 
 ```bash
+# Generate Prisma Client
 npm run prisma:generate
+
+# Push schema to database
+npx prisma db push
 ```
 
-### Running Locally
+### 5. Run the Server
 
 ```bash
 # Start development server with hot-reload
 npm run dev
 
-# Run automated tests
+# Run test suite
 npm run test
 
-# Compile TypeScript to production bundle
+# Build for production
 npm run build
 
-# Start production build
+# Start production server
 npm start
 ```
 
-### API Endpoints Overview
+The API will be available at: **http://localhost:5000**
 
-- `GET /api/health` - Service health status
-- `GET /api/rfqs` - List all RFQs with dynamic statuses and best quotation summaries
-- `POST /api/rfqs` - Create a new RFQ
-- `GET /api/rfqs/:id` - Get RFQ by ID with attached quotes
-- `GET /api/quotations` - List all supplier quotations
-- `POST /api/quotations` - Submit a quotation for an existing RFQ
-- `GET /api/quotations/rfq/:rfqId` - List quotations for a specific RFQ
+---
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Health check endpoint |
+| `POST` | `/api/auth/register` | Register new user |
+| `POST` | `/api/auth/login` | Login user & issue cookie/token |
+| `POST` | `/api/auth/logout` | Clear auth cookie |
+| `GET` | `/api/auth/me` | Get current user profile |
+| `GET` | `/api/rfqs` | List all RFQs with dynamic status |
+| `POST` | `/api/rfqs` | Create a new RFQ |
+| `GET` | `/api/rfqs/:id` | Get RFQ details and quotes |
+| `GET` | `/api/quotations` | List all quotations |
+| `POST` | `/api/quotations` | Submit a quote for an RFQ |
+| `GET` | `/api/quotations/rfq/:rfqId` | List quotations for a specific RFQ |
+
+---
+
+## Folder Structure
+
+```
+quotewise-backend/
+├── prisma/               # Schema and migrations
+├── src/
+│   ├── config/           # App, database, and Redis configuration
+│   ├── modules/
+│   │   ├── auth/         # Auth domain, use cases, controller
+│   │   ├── rfq/          # RFQ domain, use cases, repository, controller
+│   │   └── quotation/    # Quotation domain, use cases, repository, controller
+│   ├── shared/           # Middlewares, errors, types, logger
+│   ├── app.ts            # Express application setup
+│   ├── container.ts      # Awilix DI container
+│   └── server.ts         # Server entry point
+└── tests/                # Unit & integration tests
+```
